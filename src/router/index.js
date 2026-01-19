@@ -23,45 +23,38 @@ const routes = [
   {
     path: '/transactions',
     name: 'transactions',
-    component: () => import('../views/Transactions/Index.vue'),
+    component: () => import('../views/Transactions.vue'),
     meta: { title: 'Transactions', requiresAuth: true },
-    redirect: '/transactions/cash-bank',
-    children: [
-      {
-        path: '',
-        redirect: 'cash-bank',
-      },
-      {
-        path: 'cash-bank',
-        name: 'cash-bank-transactions',
-        component: () => import('../views/Transactions/CashBank.vue'),
-        meta: { title: 'Cash / Bank Transactions' },
-      },
-      {
-        path: 'journal',
-        name: 'journal-entries',
-        component: () => import('../views/Transactions/JournalEntries.vue'),
-        meta: { title: 'Journal Entries' },
-      },
-      {
-        path: 'sales',
-        name: 'sales-revenue',
-        component: () => import('../views/Transactions/SalesRevenue.vue'),
-        meta: { title: 'Sales / Revenue' },
-      },
-      {
-        path: 'purchases',
-        name: 'purchases-expenses',
-        component: () => import('../views/Transactions/PurchasesExpenses.vue'),
-        meta: { title: 'Purchases / Expenses' },
-      },
-      {
-        path: 'recurring',
-        name: 'recurring-transactions',
-        component: () => import('../views/Transactions/Recurring.vue'),
-        meta: { title: 'Recurring Transactions' },
-      },
-    ],
+  },
+  {
+    path: '/transactions/cash-bank',
+    name: 'cash-bank-transactions',
+    component: () => import('../views/Transactions/CashBank.vue'),
+    meta: { title: 'Cash / Bank Transactions', requiresAuth: true },
+  },
+  {
+    path: '/transactions/journal',
+    name: 'journal-entries',
+    component: () => import('../views/Transactions/JournalEntries.vue'),
+    meta: { title: 'Journal Entries', requiresAuth: true },
+  },
+  {
+    path: '/transactions/sales',
+    name: 'sales-revenue',
+    component: () => import('../views/Transactions/SalesRevenue.vue'),
+    meta: { title: 'Sales / Revenue', requiresAuth: true },
+  },
+  {
+    path: '/transactions/purchases',
+    name: 'purchases-expenses',
+    component: () => import('../views/Transactions/PurchasesExpenses.vue'),
+    meta: { title: 'Purchases / Expenses', requiresAuth: true },
+  },
+  {
+    path: '/transactions/recurring',
+    name: 'recurring-transactions',
+    component: () => import('../views/Transactions/Recurring.vue'),
+    meta: { title: 'Recurring Transactions', requiresAuth: true },
   },
   {
     path: '/receivables',
@@ -78,14 +71,10 @@ const routes = [
   {
     path: '/reports',
     name: 'financial-reports',
-    component: () => import('../views/Reports/Index.vue'),
     meta: { title: 'Financial Reports', requiresAuth: true },
+    component: () => import('../views/Reports/Index.vue'),
     redirect: '/reports/balance-sheet',
     children: [
-      {
-        path: '',
-        redirect: 'balance-sheet',
-      },
       {
         path: 'balance-sheet',
         name: 'balance-sheet',

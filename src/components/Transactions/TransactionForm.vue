@@ -1,0 +1,431 @@
+<template>
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-8">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl p-6">
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-gray-900">
+          {{ isEditing ? 'Edit Transaction' : 'New Transaction' }}
+        </h2>
+        <button
+          @click="$emit('close')"
+          class="text-gray-400 hover:text-gray-600 transition"
+        >
+          <span class="text-2xl">&times;</span>
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form @submit.prevent="submitForm" class="space-y-6">
+        <!-- Reference & Type Row -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Reference <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.reference"
+              type="text"
+              :disabled="isEditing"
+              placeholder="TXN-2025-001"
+              class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              :class="{ 'bg-gray-100 cursor-not-allowed': isEditing }"
+            />
+            <span v-if="errors.reference" class="text-sm text-red-500 mt-1">{{ errors.reference[0] }}</span>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Type <span class="text-red-500">*</span>
+            </label>
+            <select
+              v-model="form.type"
+              class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Type</option>
+              <option value="receipt">Receipt (Income)</option>
+              <option value="payment">Payment (Expense)</option>
+              <option value="journal">Journal Entry</option>
+              <option value="transfer">Transfer</option>
+            </select>
+            <span v-if="errors.type" class="text-sm text-red-500 mt-1">{{ errors.type[0] }}</span>
+          </div>
+        </div>
+
+        <!-- Transaction Date & Amount Row -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Transaction Date <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.transaction_date"
+              type="date"
+              class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span v-if="errors.transaction_date" class="text-sm text-red-500 mt-1">{{ errors.transaction_date[0] }}</span>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Total Amount <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.amount"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="0.00"
+              class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <span v-if="errors.amount" class="text-sm text-red-500 mt-1">{{ errors.amount[0] }}</span>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+          <input
+            v-model="form.description"
+            type="text"
+            placeholder="Enter transaction description"
+            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <span v-if="errors.description" class="text-sm text-red-500 mt-1">{{ errors.description[0] }}</span>
+        </div>
+
+        <!-- Status -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Status <span class="text-red-500">*</span>
+          </label>
+          <select
+            v-model="form.status"
+            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="draft">Draft</option>
+            <option value="pending">Pending Approval</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <span v-if="errors.status" class="text-sm text-red-500 mt-1">{{ errors.status[0] }}</span>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+          <textarea
+            v-model="form.notes"
+            rows="3"
+            placeholder="Additional notes or comments"
+            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          ></textarea>
+        </div>
+
+        <!-- Line Items Section -->
+        <div class="border-t pt-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Line Items</h3>
+            <button
+              type="button"
+              @click="addLineItem"
+              class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition text-sm"
+            >
+              + Add Line Item
+            </button>
+          </div>
+
+          <!-- Balance Check -->
+          <div class="mb-4 p-3 bg-gray-50 rounded-md">
+            <p class="text-sm text-gray-700">
+              Total Debits: <strong class="text-gray-900">{{ formatCurrency(totalDebits) }}</strong> |
+              Total Credits: <strong class="text-gray-900">{{ formatCurrency(totalCredits) }}</strong>
+              <span
+                v-if="isBalanced"
+                class="ml-4 text-green-600 font-semibold"
+              >
+                ✓ Balanced
+              </span>
+              <span
+                v-else
+                class="ml-4 text-red-600 font-semibold"
+              >
+                ✗ Not Balanced (Difference: {{ formatCurrency(Math.abs(totalDebits - totalCredits)) }})
+              </span>
+            </p>
+          </div>
+
+          <!-- Line Items Table -->
+          <div class="space-y-3">
+            <div
+              v-for="(item, index) in form.items"
+              :key="index"
+              class="flex gap-3 items-start p-3 bg-gray-50 rounded-md"
+            >
+              <!-- Account -->
+              <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Account</label>
+                <select
+                  v-model="item.account_id"
+                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Account</option>
+                  <option
+                    v-for="account in accounts"
+                    :key="account.id"
+                    :value="account.id"
+                  >
+                    {{ account.code }} - {{ account.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Type (Debit/Credit) -->
+              <div class="w-32">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                <select
+                  v-model="item.type"
+                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="debit">Debit</option>
+                  <option value="credit">Credit</option>
+                </select>
+              </div>
+
+              <!-- Amount -->
+              <div class="w-32">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Amount</label>
+                <input
+                  v-model="item.amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <!-- Description -->
+              <div class="flex-1">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                <input
+                  v-model="item.description"
+                  type="text"
+                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <!-- Remove Button -->
+              <div class="flex items-end pb-2">
+                <button
+                  type="button"
+                  @click="removeLineItem(index)"
+                  class="bg-red-600 text-white px-2 py-2 rounded hover:bg-red-700 transition text-sm"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+
+            <span v-if="errors['items.0']" class="text-sm text-red-500">{{ errors['items.0'][0] }}</span>
+          </div>
+        </div>
+
+        <!-- Error Messages -->
+        <div
+          v-if="Object.keys(errors).length > 0 && !errors['items.0']"
+          class="bg-red-50 border border-red-200 rounded-md p-3"
+        >
+          <p class="text-sm text-red-700">
+            <strong>Validation Error:</strong> Please check all required fields and try again.
+          </p>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex gap-3 justify-end border-t pt-6">
+          <button
+            type="button"
+            @click="$emit('close')"
+            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            :disabled="loading || !isBalanced"
+            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {{ loading ? 'Saving...' : (isEditing ? 'Update Transaction' : 'Create Transaction') }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useTransactionStore } from '@/stores/transactions';
+import api from '@/config/api';
+
+const props = defineProps({
+  transaction: {
+    type: Object,
+    default: null,
+  },
+});
+
+const emit = defineEmits(['close', 'saved']);
+
+const transactionStore = useTransactionStore();
+const loading = ref(false);
+const errors = ref({});
+const accounts = ref([]);
+
+const isEditing = computed(() => !!props.transaction?.id);
+
+const form = reactive({
+  reference: '',
+  description: '',
+  transaction_date: new Date().toISOString().split('T')[0],
+  type: '',
+  status: 'draft',
+  amount: 0,
+  notes: '',
+  items: [
+    { account_id: '', type: 'debit', amount: 0, description: '' },
+    { account_id: '', type: 'credit', amount: 0, description: '' },
+  ],
+});
+
+const totalDebits = computed(() => {
+  return form.items
+    .filter(item => item.type === 'debit')
+    .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+});
+
+const totalCredits = computed(() => {
+  return form.items
+    .filter(item => item.type === 'credit')
+    .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+});
+
+const isBalanced = computed(() => {
+  return form.items.length > 0 && Math.abs(totalDebits.value - totalCredits.value) < 0.01;
+});
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(value);
+}
+
+function addLineItem() {
+  form.items.push({
+    account_id: '',
+    type: 'debit',
+    amount: 0,
+    description: '',
+  });
+}
+
+function removeLineItem(index) {
+  if (form.items.length > 1) {
+    form.items.splice(index, 1);
+  }
+}
+
+async function fetchAccounts() {
+  try {
+    const response = await api.get('/accounts', { params: { per_page: 100 } });
+    if (response.data.success) {
+      accounts.value = response.data.data;
+    }
+  } catch (err) {
+    console.error('Error fetching accounts:', err);
+  }
+}
+
+function populateForm() {
+  if (props.transaction) {
+    form.reference = props.transaction.reference;
+    form.description = props.transaction.description || '';
+    form.transaction_date = props.transaction.transaction_date;
+    form.type = props.transaction.type;
+    form.status = props.transaction.status;
+    form.amount = props.transaction.amount;
+    form.notes = props.transaction.notes || '';
+
+    // Populate items
+    form.items = props.transaction.items.map(item => ({
+      account_id: item.account_id,
+      type: item.type,
+      amount: item.amount,
+      description: item.description || '',
+    }));
+  }
+}
+
+async function submitForm() {
+  loading.value = true;
+  errors.value = {};
+
+  try {
+    const data = {
+      reference: form.reference,
+      description: form.description,
+      transaction_date: form.transaction_date,
+      type: form.type,
+      status: form.status,
+      amount: parseFloat(form.amount),
+      notes: form.notes,
+      items: form.items.map(item => ({
+        account_id: parseInt(item.account_id),
+        type: item.type,
+        amount: parseFloat(item.amount),
+        description: item.description,
+      })),
+    };
+
+    let result;
+    if (isEditing.value) {
+      result = await transactionStore.updateTransaction(props.transaction.id, data);
+    } else {
+      result = await transactionStore.createTransaction(data);
+    }
+
+    if (result) {
+      emit('saved', result);
+      emit('close');
+    } else if (transactionStore.error) {
+      // Check if it's a validation error
+      const errorMsg = transactionStore.error;
+      if (errorMsg.includes('Debits must equal credits')) {
+        errors.value.items = [errorMsg];
+      } else {
+        errors.value.general = [errorMsg];
+      }
+    }
+  } catch (err) {
+    if (err.response?.data?.errors) {
+      errors.value = err.response.data.errors;
+    } else {
+      errors.value.general = [err.message];
+    }
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(() => {
+  fetchAccounts();
+  populateForm();
+});
+</script>
+
+<style scoped>
+input:disabled,
+textarea:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+</style>

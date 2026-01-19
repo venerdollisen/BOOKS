@@ -15,11 +15,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Seed accounts first (foundational data)
+        $this->call(AccountSeeder::class);
 
+        // Seed test user
         User::factory()->create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'admin@example.com',
+            'password' => '12345678', // Password will be hashed by the factory
         ]);
+
+        // Seed transactions
+        $this->call(TransactionSeeder::class);
     }
 }

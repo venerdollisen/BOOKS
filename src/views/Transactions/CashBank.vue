@@ -153,7 +153,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { transactionsApi } from '@/services/api'
 import CashBankModal from '@/components/Transactions/CashBankModal.vue'
 import { PlusIcon } from '@heroicons/vue/24/outline'
@@ -168,6 +168,11 @@ const filters = ref({
 const showModal = ref(false)
 const selectedTransaction = ref(null)
 const expandedTransactions = ref([])
+
+// Watch filters for changes
+watch(filters, () => {
+  loadTransactions()
+}, { deep: true })
 
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US')
@@ -191,7 +196,11 @@ const getTypeClass = (type) => {
 
 const loadTransactions = async () => {
   try {
-    const params = { ...filters.value }
+    const params = {
+      ...filters.value,
+      // Filter by cash/bank transaction types (exclude journal entries)
+      type: filters.value.type || 'receipt,payment,transfer',
+    }
     const response = await transactionsApi.getAll(params)
     transactions.value = response.data || []
   } catch (error) {
