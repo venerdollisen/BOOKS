@@ -38,13 +38,12 @@
             <div
               v-for="(line, index) in form.entries"
               :key="index"
-              class="grid grid-cols-12 gap-3 items-end p-3 bg-gray-50 rounded-lg"
+              class="grid grid-cols-14 gap-2 items-end p-3 bg-gray-50 rounded-lg"
             >
-              <div class="col-span-4">
+              <div class="col-span-2">
                 <label class="label text-xs">Account *</label>
                 <select v-model="line.account_id" required class="input text-sm">
                   <option value="">Select Account</option>
-                  <!-- Accounts would be loaded from API -->
                   <option value="1">Cash</option>
                   <option value="2">Bank Account</option>
                   <option value="3">Accounts Receivable</option>
@@ -55,7 +54,7 @@
                   <option value="8">Equipment</option>
                 </select>
               </div>
-              <div class="col-span-3">
+              <div class="col-span-1">
                 <label class="label text-xs">Debit</label>
                 <input
                   v-model.number="line.debit"
@@ -67,7 +66,7 @@
                   @input="updateLine(index)"
                 />
               </div>
-              <div class="col-span-3">
+              <div class="col-span-1">
                 <label class="label text-xs">Credit</label>
                 <input
                   v-model.number="line.credit"
@@ -79,7 +78,38 @@
                   @input="updateLine(index)"
                 />
               </div>
-              <div class="col-span-2 flex justify-end">
+              <div class="col-span-2">
+                <label class="label text-xs">Subsidiary</label>
+                <select v-model="line.subsidiary_account_id" class="input text-sm">
+                  <option value="">None</option>
+                  <option value="1">Head Office</option>
+                  <option value="2">Branch 1</option>
+                  <option value="3">Branch 2</option>
+                </select>
+              </div>
+              <div class="col-span-2">
+                <label class="label text-xs">Department</label>
+                <select v-model="line.department_id" class="input text-sm">
+                  <option value="">None</option>
+                  <option value="1">Sales</option>
+                  <option value="2">Operations</option>
+                  <option value="3">Finance</option>
+                </select>
+              </div>
+              <div class="col-span-2">
+                <label class="label text-xs">Project</label>
+                <select v-model="line.project_id" class="input text-sm">
+                  <option value="">None</option>
+                  <option value="1">Project A</option>
+                  <option value="2">Project B</option>
+                  <option value="3">Project C</option>
+                </select>
+              </div>
+              <div class="col-span-1 flex justify-center items-center h-10">
+                <span v-if="isLineItemAllocationComplete(line)" class="text-green-600 text-sm font-bold">✓</span>
+                <span v-else-if="isLineItemAllocationPartial(line)" class="text-red-600 text-sm font-bold">⚠</span>
+              </div>
+              <div class="col-span-1 flex justify-end">
                 <button
                   v-if="form.entries.length > 2"
                   type="button"
@@ -144,8 +174,8 @@ const form = ref({
   description: '',
   reference: '',
   entries: [
-    { account_id: '', debit: 0, credit: 0 },
-    { account_id: '', debit: 0, credit: 0 },
+    { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
+    { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
   ],
 })
 
@@ -184,7 +214,28 @@ watch(
 )
 
 const addEntry = () => {
-  form.value.entries.push({ account_id: '', debit: 0, credit: 0 })
+  form.value.entries.push({ account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' })
+}
+
+const isLineItemAllocationComplete = (line) => {
+  return line.subsidiary_account_id && line.department_id && line.project_id
+}
+
+const isLineItemAllocationPartial = (line) => {
+  const hasAny = line.subsidiary_account_id || line.department_id || line.project_id
+  const hasAll = line.subsidiary_account_id && line.department_id && line.project_id
+  return hasAny && !hasAll
+}
+
+const validateAllocations = () => {
+  for (let i = 0; i < form.value.entries.length; i++) {
+    const line = form.value.entries[i]
+    if (isLineItemAllocationPartial(line)) {
+      alert(`Entry ${i + 1} has incomplete allocation: All three fields (Subsidiary, Department, Project) must be filled together or left empty.`)
+      return false
+    }
+  }
+  return true
 }
 
 const removeEntry = (index) => {
@@ -217,6 +268,10 @@ const saveEntry = async () => {
     return
   }
 
+  if (!validateAllocations()) {
+    return
+  }
+
   try {
     const entryData = {
       date: form.value.date,
@@ -226,18 +281,24 @@ const saveEntry = async () => {
         account_id: line.account_id,
         debit: parseFloat(line.debit) || 0,
         credit: parseFloat(line.credit) || 0,
+        subsidiary_account_id: line.subsidiary_account_id || null,
+        department_id: line.department_id || null,
+        project_id: line.project_id || null,
       })),
     }
 
     if (props.entry) {
       await transactionsApi.update(props.entry.id, entryData)
+      alert('Journal entry updated successfully!')
     } else {
       await transactionsApi.createJournalEntry(entryData)
+      alert('Journal entry created successfully!')
     }
     emit('saved')
+    emit('close')
   } catch (error) {
     console.error('Error saving journal entry:', error)
-    alert('Error saving journal entry. Please try again.')
+    alert('Error saving journal entry: ' + (error.response?.data?.message || error.message))
   }
 }
 </script>

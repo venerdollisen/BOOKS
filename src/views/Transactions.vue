@@ -5,7 +5,7 @@
       <h1 class="text-3xl font-bold text-gray-900">Transactions</h1>
       <button
         @click="showForm = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        class="bg-[#06275c] text-white px-4 py-2 rounded-lg hover:bg-[#051f47] transition"
       >
         + New Transaction
       </button>
@@ -258,7 +258,7 @@
       <p class="text-gray-600 text-lg mb-4">No transactions found</p>
       <button
         @click="showForm = true"
-        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        class="bg-[#06275c] text-white px-4 py-2 rounded-lg hover:bg-[#051f47] transition"
       >
         Create First Transaction
       </button>
@@ -296,7 +296,7 @@
             @click="transactionStore.goToPage(page)"
             :class="
               page === transactionStore.pagination.current_page
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[#06275c] text-white'
                 : 'border border-gray-300 hover:bg-gray-100'
             "
             class="px-3 py-1 rounded-md transition"

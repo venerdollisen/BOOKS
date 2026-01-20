@@ -125,7 +125,7 @@
         <button
           v-if="transaction.status === 'draft'"
           @click="$emit('edit', transaction)"
-          class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+          class="px-4 py-2 bg-[#06275c] text-white rounded-md hover:bg-[#051f47] transition"
         >
           Edit
         </button>
@@ -134,7 +134,7 @@
         <button
           v-if="transaction.status === 'pending'"
           @click="$emit('approve', transaction.id)"
-          class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+          class="px-4 py-2 bg-[#06275c] text-white rounded-md hover:bg-[#051f47] transition"
         >
           Approve
         </button>

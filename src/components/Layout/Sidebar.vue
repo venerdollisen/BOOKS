@@ -169,6 +169,8 @@ const menuItems = [
       { name: 'profit-loss', path: '/reports/profit-loss', label: 'Profit & Loss' },
       { name: 'cash-flow', path: '/reports/cash-flow', label: 'Cash Flow' },
       { name: 'trial-balance', path: '/reports/trial-balance', label: 'Trial Balance' },
+      { name: 'general-ledger', path: '/reports/general-ledger', label: 'General Ledger' },
+      { name: 'periods', path: '/reports/periods', label: 'Period Management' },
     ],
   },
   { name: 'payroll', path: '/payroll', label: 'Payroll / Employees', icon: UserGroupIcon },

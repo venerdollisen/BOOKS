@@ -36,4 +36,35 @@ class Account extends Model
     {
         return $this->hasMany(Account::class, 'parent_id');
     }
+
+    /**
+     * Get all transaction items for this account.
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(TransactionItem::class);
+    }
+
+    /**
+     * Get account type for reporting (normalize account_type field)
+     */
+    public function getTypeAttribute()
+    {
+        $typeMap = [
+            'asset' => 'asset',
+            'Asset' => 'asset',
+            'liability' => 'liability',
+            'Liability' => 'liability',
+            'equity' => 'equity',
+            'Equity' => 'equity',
+            'revenue' => 'revenue',
+            'Revenue' => 'revenue',
+            'income' => 'revenue',
+            'Income' => 'revenue',
+            'expense' => 'expense',
+            'Expense' => 'expense',
+        ];
+
+        return $typeMap[$this->account_type] ?? strtolower($this->account_type);
+    }
 }

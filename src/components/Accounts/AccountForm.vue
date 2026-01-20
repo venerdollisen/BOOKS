@@ -102,7 +102,7 @@
           <button
             type="submit"
             :disabled="loading"
-            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            class="flex-1 px-4 py-2 bg-[#06275c] text-white rounded-lg hover:bg-[#051f47] disabled:opacity-50"
           >
             {{ loading ? 'Saving...' : isEditing ? 'Update' : 'Create' }}
           </button>

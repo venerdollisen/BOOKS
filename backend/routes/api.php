@@ -6,6 +6,8 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SubsidiaryAccountController;
+use App\Http\Controllers\Api\PeriodController;
+use App\Http\Controllers\Api\ReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -68,6 +70,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{subsidiaryAccount}', [SubsidiaryAccountController::class, 'show'])->name('subsidiary-accounts.show');
         Route::put('/{subsidiaryAccount}', [SubsidiaryAccountController::class, 'update'])->name('subsidiary-accounts.update');
         Route::delete('/{subsidiaryAccount}', [SubsidiaryAccountController::class, 'destroy'])->name('subsidiary-accounts.destroy');
+    });
+
+    // Periods routes
+    Route::prefix('periods')->group(function () {
+        Route::get('/', [PeriodController::class, 'index'])->name('periods.index');
+        Route::post('/', [PeriodController::class, 'store'])->name('periods.store');
+        Route::get('/{period}', [PeriodController::class, 'show'])->name('periods.show');
+        Route::put('/{period}', [PeriodController::class, 'update'])->name('periods.update');
+        Route::post('/{period}/close', [PeriodController::class, 'close'])->name('periods.close');
+        Route::delete('/{period}', [PeriodController::class, 'destroy'])->name('periods.destroy');
+    });
+
+    // Reports routes
+    Route::prefix('reports')->group(function () {
+        Route::get('/trial-balance', [ReportController::class, 'trialBalance'])->name('reports.trial-balance');
+        Route::get('/gl-summary', [ReportController::class, 'glSummary'])->name('reports.gl-summary');
+        Route::get('/gl/{account}', [ReportController::class, 'generalLedger'])->name('reports.gl');
     });
 });
 

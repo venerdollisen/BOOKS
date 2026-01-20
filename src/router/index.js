@@ -99,6 +99,18 @@ const routes = [
         component: () => import('../views/Reports/TrialBalance.vue'),
         meta: { title: 'Trial Balance' },
       },
+      {
+        path: 'general-ledger',
+        name: 'general-ledger',
+        component: () => import('../views/Reports/GeneralLedger.vue'),
+        meta: { title: 'General Ledger' },
+      },
+      {
+        path: 'periods',
+        name: 'periods',
+        component: () => import('../views/Reports/PeriodManagement.vue'),
+        meta: { title: 'Period Management' },
+      },
     ],
   },
   {

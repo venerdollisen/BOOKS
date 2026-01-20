@@ -123,7 +123,21 @@
 
         <!-- Allocation Section -->
         <div class="border-t pt-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-4">Allocations (Optional)</h3>
+          <div class="mb-4 flex items-center gap-2">
+            <h3 class="text-sm font-semibold text-gray-900">Allocations (Optional)</h3>
+            <span
+              v-if="isTransactionAllocationComplete"
+              class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded"
+            >
+              ✓ Complete
+            </span>
+            <span
+              v-else-if="isTransactionAllocationPartial"
+              class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded"
+            >
+              ⚠ Incomplete
+            </span>
+          </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Department -->
             <div>
@@ -191,7 +205,7 @@
             <button
               type="button"
               @click="addLineItem"
-              class="bg-green-600 text-white px-3 py-2 rounded-md hover:bg-green-700 transition text-sm"
+              class="bg-[#06275c] text-white px-3 py-2 rounded-md hover:bg-[#051f47] transition text-sm"
             >
               + Add Line Item
             </button>
@@ -222,124 +236,129 @@
             <div
               v-for="(item, index) in form.items"
               :key="index"
-              class="p-3 bg-gray-50 rounded-md border border-gray-200"
+              class="grid grid-cols-16 gap-2 items-end p-3 bg-gray-50 rounded-md border border-gray-200"
             >
-              <!-- Main Row: Account, Type, Amount, Description -->
-              <div class="flex gap-3 items-start mb-3">
-                <!-- Account -->
-                <div class="flex-1">
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Account</label>
-                  <select
-                    v-model="item.account_id"
-                    class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <!-- Account -->
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Account</label>
+                <select
+                  v-model="item.account_id"
+                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Account</option>
+                  <option
+                    v-for="account in accounts"
+                    :key="account.id"
+                    :value="account.id"
                   >
-                    <option value="">Select Account</option>
-                    <option
-                      v-for="account in accounts"
-                      :key="account.id"
-                      :value="account.id"
-                    >
-                      {{ account.code }} - {{ account.name }}
-                    </option>
-                  </select>
-                </div>
-
-                <!-- Type (Debit/Credit) -->
-                <div class="w-32">
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Type</label>
-                  <select
-                    v-model="item.type"
-                    class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="debit">Debit</option>
-                    <option value="credit">Credit</option>
-                  </select>
-                </div>
-
-                <!-- Amount -->
-                <div class="w-32">
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Amount</label>
-                  <input
-                    v-model="item.amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <!-- Description -->
-                <div class="flex-1">
-                  <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
-                  <input
-                    v-model="item.description"
-                    type="text"
-                    class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <!-- Remove Button -->
-                <div class="flex items-end pb-2">
-                  <button
-                    type="button"
-                    @click="removeLineItem(index)"
-                    class="bg-red-600 text-white px-2 py-2 rounded hover:bg-red-700 transition text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
+                    {{ account.code }} - {{ account.name }}
+                  </option>
+                </select>
               </div>
 
-              <!-- Allocation Row (optional for line items) -->
-              <div class="grid grid-cols-3 gap-3 pt-3 border-t border-gray-200">
-                <div>
-                  <label class="block text-xs font-medium text-gray-600 mb-1">Department</label>
-                  <select
-                    v-model="item.department_id"
-                    class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <!-- Type (Debit/Credit) -->
+              <div class="col-span-1">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Type</label>
+                <select
+                  v-model="item.type"
+                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="debit">Debit</option>
+                  <option value="credit">Credit</option>
+                </select>
+              </div>
+
+              <!-- Amount -->
+              <div class="col-span-1">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Amount</label>
+                <input
+                  v-model="item.amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <!-- Description -->
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                <input
+                  v-model="item.description"
+                  type="text"
+                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <!-- Department -->
+              <div class="col-span-1">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Department</label>
+                <select
+                  v-model="item.department_id"
+                  class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">None</option>
+                  <option
+                    v-for="dept in departments"
+                    :key="dept.id"
+                    :value="dept.id"
                   >
-                    <option value="">No Department</option>
-                    <option
-                      v-for="dept in departments"
-                      :key="dept.id"
-                      :value="dept.id"
-                    >
-                      {{ dept.code }}
-                    </option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-600 mb-1">Project</label>
-                  <select
-                    v-model="item.project_id"
-                    class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    {{ dept.code }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Project -->
+              <div class="col-span-1">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Project</label>
+                <select
+                  v-model="item.project_id"
+                  class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">None</option>
+                  <option
+                    v-for="proj in projects"
+                    :key="proj.id"
+                    :value="proj.id"
                   >
-                    <option value="">No Project</option>
-                    <option
-                      v-for="proj in projects"
-                      :key="proj.id"
-                      :value="proj.id"
-                    >
-                      {{ proj.name }}
-                    </option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-gray-600 mb-1">Cost Center</label>
-                  <select
-                    v-model="item.subsidiary_account_id"
-                    class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    {{ proj.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Cost Center -->
+              <div class="col-span-1">
+                <label class="block text-xs font-medium text-gray-600 mb-1">Cost Center</label>
+                <select
+                  v-model="item.subsidiary_account_id"
+                  class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">None</option>
+                  <option
+                    v-for="sub in subsidiaryAccounts"
+                    :key="sub.id"
+                    :value="sub.id"
                   >
-                    <option value="">No Cost Center</option>
-                    <option
-                      v-for="sub in subsidiaryAccounts"
-                      :key="sub.id"
-                      :value="sub.id"
-                    >
-                      {{ sub.code }}
-                    </option>
-                  </select>
-                </div>
+                    {{ sub.code }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Status Indicator -->
+              <div class="col-span-1 flex justify-center h-10">
+                <span v-if="isLineItemAllocationComplete(item)" class="text-green-600 text-sm font-bold">✓</span>
+                <span v-else-if="isLineItemAllocationPartial(item)" class="text-red-600 text-sm font-bold">⚠</span>
+              </div>
+
+              <!-- Remove Button -->
+              <div class="col-span-1 flex justify-end">
+                <button
+                  type="button"
+                  @click="removeLineItem(index)"
+                  class="bg-[#06275c] text-white px-2 py-2 rounded hover:bg-[#051f47] transition text-sm"
+                >
+                  Remove
+                </button>
               </div>
             </div>
 
@@ -369,7 +388,7 @@
           <button
             type="submit"
             :disabled="loading || !isBalanced"
-            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-4 py-2 bg-[#06275c] text-white rounded-md hover:bg-[#051f47] transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {{ loading ? 'Saving...' : (isEditing ? 'Update Transaction' : 'Create Transaction') }}
           </button>
@@ -443,6 +462,16 @@ const totalCredits = computed(() => {
 
 const isBalanced = computed(() => {
   return form.items.length > 0 && Math.abs(totalDebits.value - totalCredits.value) < 0.01;
+});
+
+// Transaction-level allocation status
+const isTransactionAllocationComplete = computed(() => {
+  return form.department_id && form.project_id && form.subsidiary_account_id;
+});
+
+const isTransactionAllocationPartial = computed(() => {
+  const hasAny = form.department_id || form.project_id || form.subsidiary_account_id;
+  return hasAny && !isTransactionAllocationComplete.value;
 });
 
 function formatCurrency(value) {
@@ -532,9 +561,53 @@ function populateForm() {
   }
 }
 
+/**
+ * Validate allocations: if any allocation field is filled, all must be filled
+ * Returns true if valid, false if invalid
+ */
+function validateAllocations() {
+  // Check transaction-level allocations
+  const transHasAnyAllocation = form.department_id || form.project_id || form.subsidiary_account_id;
+  const transAllocationComplete = form.department_id && form.project_id && form.subsidiary_account_id;
+  
+  if (transHasAnyAllocation && !transAllocationComplete) {
+    showError('Transaction allocation incomplete: Please fill all three fields (Department, Project, Cost Center) or leave them all empty');
+    return false;
+  }
+
+  // Check line-item allocations
+  for (let i = 0; i < form.items.length; i++) {
+    const item = form.items[i];
+    const hasAnyAllocation = item.department_id || item.project_id || item.subsidiary_account_id;
+    const allocationComplete = item.department_id && item.project_id && item.subsidiary_account_id;
+    
+    if (hasAnyAllocation && !allocationComplete) {
+      showError(`Line ${i + 1} allocation incomplete: Please fill all three fields (Department, Project, Cost Center) or leave them all empty`);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isLineItemAllocationComplete(item) {
+  return item.department_id && item.project_id && item.subsidiary_account_id;
+}
+
+function isLineItemAllocationPartial(item) {
+  const hasAny = item.department_id || item.project_id || item.subsidiary_account_id;
+  return hasAny && !isLineItemAllocationComplete(item);
+}
+
 async function submitForm() {
   loading.value = true;
   errors.value = {};
+
+  // Validate allocations first
+  if (!validateAllocations()) {
+    loading.value = false;
+    return;
+  }
 
   try {
     const data = {
