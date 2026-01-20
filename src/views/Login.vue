@@ -136,10 +136,16 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useDepartmentStore } from '@/stores/departments'
+import { useProjectStore } from '@/stores/projects'
+import { useSubsidiaryAccountStore } from '@/stores/subsidiaryAccounts'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const departmentStore = useDepartmentStore()
+const projectStore = useProjectStore()
+const subsidiaryAccountStore = useSubsidiaryAccountStore()
 
 const form = reactive({
   email: '',
@@ -192,6 +198,13 @@ const handleLogin = async () => {
 
   try {
     await authStore.login(form.email, form.password, form.remember)
+    
+    // Load departments, projects, and subsidiary accounts after successful login
+    await Promise.all([
+      departmentStore.fetchDepartments().catch(err => console.error('Failed to load departments:', err)),
+      projectStore.fetchProjects().catch(err => console.error('Failed to load projects:', err)),
+      subsidiaryAccountStore.fetchSubsidiaryAccounts().catch(err => console.error('Failed to load subsidiary accounts:', err)),
+    ])
     
     // Redirect to dashboard on success
     router.push('/')

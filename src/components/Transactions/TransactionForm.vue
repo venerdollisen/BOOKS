@@ -232,138 +232,125 @@
           </div>
 
           <!-- Line Items Table -->
-          <div class="space-y-3">
-            <div
-              v-for="(item, index) in form.items"
-              :key="index"
-              class="grid grid-cols-16 gap-2 items-end p-3 bg-gray-50 rounded-md border border-gray-200"
-            >
-              <!-- Account -->
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Account</label>
-                <select
-                  v-model="item.account_id"
-                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <div class="overflow-x-auto border border-gray-200 rounded-md">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-200">
+                <tr>
+                  <th class="px-3 py-2 text-left font-semibold">Account</th>
+                  <th class="px-3 py-2 text-left font-semibold">Subsidiary</th>
+                  <th class="px-3 py-2 text-left font-semibold">Department</th>
+                  <th class="px-3 py-2 text-left font-semibold">Project</th>
+                  <th class="px-3 py-2 text-center font-semibold">Debit</th>
+                  <th class="px-3 py-2 text-center font-semibold">Credit</th>
+                  <th class="px-3 py-2 text-center font-semibold">Status</th>
+                  <th class="px-3 py-2 text-center font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(item, index) in form.items"
+                  :key="index"
+                  class="border-t border-gray-200 hover:bg-gray-50"
                 >
-                  <option value="">Select Account</option>
-                  <option
-                    v-for="account in accounts"
-                    :key="account.id"
-                    :value="account.id"
-                  >
-                    {{ account.code }} - {{ account.name }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Type (Debit/Credit) -->
-              <div class="col-span-1">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Type</label>
-                <select
-                  v-model="item.type"
-                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="debit">Debit</option>
-                  <option value="credit">Credit</option>
-                </select>
-              </div>
-
-              <!-- Amount -->
-              <div class="col-span-1">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Amount</label>
-                <input
-                  v-model="item.amount"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <!-- Description -->
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
-                <input
-                  v-model="item.description"
-                  type="text"
-                  class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <!-- Department -->
-              <div class="col-span-1">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Department</label>
-                <select
-                  v-model="item.department_id"
-                  class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">None</option>
-                  <option
-                    v-for="dept in departments"
-                    :key="dept.id"
-                    :value="dept.id"
-                  >
-                    {{ dept.code }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Project -->
-              <div class="col-span-1">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Project</label>
-                <select
-                  v-model="item.project_id"
-                  class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">None</option>
-                  <option
-                    v-for="proj in projects"
-                    :key="proj.id"
-                    :value="proj.id"
-                  >
-                    {{ proj.name }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Cost Center -->
-              <div class="col-span-1">
-                <label class="block text-xs font-medium text-gray-600 mb-1">Cost Center</label>
-                <select
-                  v-model="item.subsidiary_account_id"
-                  class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">None</option>
-                  <option
-                    v-for="sub in subsidiaryAccounts"
-                    :key="sub.id"
-                    :value="sub.id"
-                  >
-                    {{ sub.code }}
-                  </option>
-                </select>
-              </div>
-
-              <!-- Status Indicator -->
-              <div class="col-span-1 flex justify-center h-10">
-                <span v-if="isLineItemAllocationComplete(item)" class="text-green-600 text-sm font-bold">✓</span>
-                <span v-else-if="isLineItemAllocationPartial(item)" class="text-red-600 text-sm font-bold">⚠</span>
-              </div>
-
-              <!-- Remove Button -->
-              <div class="col-span-1 flex justify-end">
-                <button
-                  type="button"
-                  @click="removeLineItem(index)"
-                  class="bg-[#06275c] text-white px-2 py-2 rounded hover:bg-[#051f47] transition text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-
-            <span v-if="errors['items.0']" class="text-sm text-red-500">{{ errors['items.0'][0] }}</span>
+                  <td class="px-3 py-2">
+                    <select
+                      v-model="item.account_id"
+                      class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Account</option>
+                      <option
+                        v-for="account in accounts"
+                        :key="account.id"
+                        :value="account.id"
+                      >
+                        {{ account.code }} - {{ account.name }}
+                      </option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select
+                      v-model="item.subsidiary_account_id"
+                      class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">None</option>
+                      <option
+                        v-for="sub in subsidiaryAccounts"
+                        :key="sub.id"
+                        :value="sub.id"
+                      >
+                        {{ sub.code }}
+                      </option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select
+                      v-model="item.department_id"
+                      class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">None</option>
+                      <option
+                        v-for="dept in departments"
+                        :key="dept.id"
+                        :value="dept.id"
+                      >
+                        {{ dept.code }}
+                      </option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select
+                      v-model="item.project_id"
+                      class="w-full px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">None</option>
+                      <option
+                        v-for="proj in projects"
+                        :key="proj.id"
+                        :value="proj.id"
+                      >
+                        {{ proj.name }}
+                      </option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <input
+                      :value="item.type === 'debit' ? item.amount : 0"
+                      @input="item.type = 'debit'; item.amount = $event.target.value"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
+                    />
+                  </td>
+                  <td class="px-3 py-2">
+                    <input
+                      :value="item.type === 'credit' ? item.amount : 0"
+                      @input="item.type = 'credit'; item.amount = $event.target.value"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="w-full px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
+                    />
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <span v-if="isLineItemAllocationComplete(item)" class="text-green-600 font-bold">✓</span>
+                    <span v-else-if="isLineItemAllocationPartial(item)" class="text-red-600 font-bold">⚠</span>
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <button
+                      type="button"
+                      @click="removeLineItem(index)"
+                      class="bg-[#06275c] text-white px-2 py-1 rounded hover:bg-[#051f47] transition text-xs"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+
+          <span v-if="errors['items.0']" class="text-sm text-red-500">{{ errors['items.0'][0] }}</span>
         </div>
 
         <!-- Error Messages -->

@@ -43,90 +43,100 @@
             </button>
           </div>
 
-          <div class="space-y-3">
-            <div
-              v-for="(entry, index) in form.entries"
-              :key="index"
-              class="grid grid-cols-12 gap-2 items-end p-3 bg-gray-50 rounded-lg"
-            >
-              <div class="col-span-2">
-                <label class="label text-xs">Account *</label>
-                <select v-model="entry.account_id" required class="input text-sm">
-                  <option value="">Select Account</option>
-                  <option value="1">Cash</option>
-                  <option value="2">Bank Account</option>
-                  <option value="3">Accounts Receivable</option>
-                  <option value="4">Accounts Payable</option>
-                  <option value="5">Revenue</option>
-                  <option value="6">Expenses</option>
-                </select>
-              </div>
-              <div class="col-span-1">
-                <label class="label text-xs">Debit</label>
-                <input
-                  v-model.number="entry.debit"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  class="input text-sm"
-                  placeholder="0.00"
-                  @input="updateEntry(index)"
-                />
-              </div>
-              <div class="col-span-1">
-                <label class="label text-xs">Credit</label>
-                <input
-                  v-model.number="entry.credit"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  class="input text-sm"
-                  placeholder="0.00"
-                  @input="updateEntry(index)"
-                />
-              </div>
-              <div class="col-span-2">
-                <label class="label text-xs">Subsidiary</label>
-                <select v-model="entry.subsidiary_account_id" class="input text-sm">
-                  <option value="">None</option>
-                  <option value="1">Head Office</option>
-                  <option value="2">Branch 1</option>
-                  <option value="3">Branch 2</option>
-                </select>
-              </div>
-              <div class="col-span-2">
-                <label class="label text-xs">Department</label>
-                <select v-model="entry.department_id" class="input text-sm">
-                  <option value="">None</option>
-                  <option value="1">Sales</option>
-                  <option value="2">Operations</option>
-                  <option value="3">Finance</option>
-                </select>
-              </div>
-              <div class="col-span-2">
-                <label class="label text-xs">Project</label>
-                <select v-model="entry.project_id" class="input text-sm">
-                  <option value="">None</option>
-                  <option value="1">Project A</option>
-                  <option value="2">Project B</option>
-                  <option value="3">Project C</option>
-                </select>
-              </div>
-              <div class="col-span-1 flex justify-center items-center h-10">
-                <span v-if="isLineItemAllocationComplete(entry)" class="text-green-600 text-sm font-bold">✓</span>
-                <span v-else-if="isLineItemAllocationPartial(entry)" class="text-red-600 text-sm font-bold">⚠</span>
-              </div>
-              <div class="col-span-1 flex justify-end items-center h-10">
-                <button
-                  v-if="form.entries.length > 2"
-                  type="button"
-                  @click="removeEntry(index)"
-                  class="text-red-600 hover:text-red-700"
+          <div class="overflow-x-auto border border-gray-200 rounded-lg">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-200">
+                <tr>
+                  <th class="px-3 py-2 text-left font-semibold">Account</th>
+                  <th class="px-3 py-2 text-left font-semibold">Subsidiary</th>
+                  <th class="px-3 py-2 text-left font-semibold">Department</th>
+                  <th class="px-3 py-2 text-left font-semibold">Project</th>
+                  <th class="px-3 py-2 text-center font-semibold">Debit</th>
+                  <th class="px-3 py-2 text-center font-semibold">Credit</th>
+                  <th class="px-3 py-2 text-center font-semibold">Status</th>
+                  <th class="px-3 py-2 text-center font-semibold">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(entry, index) in form.entries"
+                  :key="index"
+                  class="border-t border-gray-200 hover:bg-gray-100"
                 >
-                  <TrashIcon class="h-5 w-5" />
-                </button>
-              </div>
-            </div>
+                  <td class="px-3 py-2">
+                    <select v-model="entry.account_id" required class="input text-sm w-full">
+                      <option value="">Select Account</option>
+                      <option value="1">Cash</option>
+                      <option value="2">Bank Account</option>
+                      <option value="3">Accounts Receivable</option>
+                      <option value="4">Accounts Payable</option>
+                      <option value="5">Revenue</option>
+                      <option value="6">Expenses</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select v-model="entry.subsidiary_account_id" class="input text-sm w-full">
+                      <option value="">None</option>
+                      <option value="1">Head Office</option>
+                      <option value="2">Branch 1</option>
+                      <option value="3">Branch 2</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select v-model="entry.department_id" class="input text-sm w-full">
+                      <option value="">None</option>
+                      <option value="1">Sales</option>
+                      <option value="2">Operations</option>
+                      <option value="3">Finance</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <select v-model="entry.project_id" class="input text-sm w-full">
+                      <option value="">None</option>
+                      <option value="1">Project A</option>
+                      <option value="2">Project B</option>
+                      <option value="3">Project C</option>
+                    </select>
+                  </td>
+                  <td class="px-3 py-2">
+                    <input
+                      v-model.number="entry.debit"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="input text-sm w-full text-right"
+                      placeholder="0.00"
+                      @input="updateEntry(index)"
+                    />
+                  </td>
+                  <td class="px-3 py-2">
+                    <input
+                      v-model.number="entry.credit"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="input text-sm w-full text-right"
+                      placeholder="0.00"
+                      @input="updateEntry(index)"
+                    />
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <span v-if="isLineItemAllocationComplete(entry)" class="text-green-600 font-bold">✓</span>
+                    <span v-else-if="isLineItemAllocationPartial(entry)" class="text-red-600 font-bold">⚠</span>
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <button
+                      v-if="form.entries.length > 2"
+                      type="button"
+                      @click="removeEntry(index)"
+                      class="text-red-600 hover:text-red-700"
+                    >
+                      <TrashIcon class="h-5 w-5" />
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           <!-- Balance Check -->
