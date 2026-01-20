@@ -45,11 +45,6 @@ const sidebarOpen = ref(false)
 const showLayout = computed(() => {
   return route.name !== 'login'
 })
-
-// Initialize auth on app mount
-onMounted(async () => {
-  await authStore.initAuth()
-})
 </script>
 
 <style scoped>

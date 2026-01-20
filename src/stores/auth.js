@@ -13,7 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
   // Initialize auth from token if exists
   const initAuth = async () => {
     const storedToken = localStorage.getItem('auth_token')
-    if (storedToken && !token.value) {
+    if (storedToken) {
       token.value = storedToken
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`
       

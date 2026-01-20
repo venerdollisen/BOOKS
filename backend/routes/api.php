@@ -22,6 +22,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::get('user', [AuthController::class, 'user'])->name('auth.user');
         Route::post('logout', [AuthController::class, 'logout'])->name('auth.logout');
+        Route::get('check', [AuthController::class, 'check'])->name('auth.check');
     });
 
     // Chart of Accounts routes

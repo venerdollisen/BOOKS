@@ -11,8 +11,13 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 
-// Initialize auth store
+// Initialize auth store before mounting
 const authStore = useAuthStore()
-authStore.initAuth()
 
-app.mount('#app')
+// Wait for auth initialization before starting the app
+authStore.initAuth().then(() => {
+  app.mount('#app')
+}).catch(() => {
+  // Even if init fails, still mount the app (user will be redirected to login)
+  app.mount('#app')
+})
