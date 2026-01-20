@@ -3,6 +3,9 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\SubsidiaryAccountController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +41,33 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
         Route::post('/{transaction}/approve', [TransactionController::class, 'approve'])->name('transactions.approve');
         Route::post('/{transaction}/reject', [TransactionController::class, 'reject'])->name('transactions.reject');
+    });
+
+    // Departments routes
+    Route::prefix('departments')->group(function () {
+        Route::get('/', [DepartmentController::class, 'index'])->name('departments.index');
+        Route::post('/', [DepartmentController::class, 'store'])->name('departments.store');
+        Route::get('/{department}', [DepartmentController::class, 'show'])->name('departments.show');
+        Route::put('/{department}', [DepartmentController::class, 'update'])->name('departments.update');
+        Route::delete('/{department}', [DepartmentController::class, 'destroy'])->name('departments.destroy');
+    });
+
+    // Projects routes
+    Route::prefix('projects')->group(function () {
+        Route::get('/', [ProjectController::class, 'index'])->name('projects.index');
+        Route::post('/', [ProjectController::class, 'store'])->name('projects.store');
+        Route::get('/{project}', [ProjectController::class, 'show'])->name('projects.show');
+        Route::put('/{project}', [ProjectController::class, 'update'])->name('projects.update');
+        Route::delete('/{project}', [ProjectController::class, 'destroy'])->name('projects.destroy');
+    });
+
+    // Subsidiary Accounts routes
+    Route::prefix('subsidiary-accounts')->group(function () {
+        Route::get('/', [SubsidiaryAccountController::class, 'index'])->name('subsidiary-accounts.index');
+        Route::post('/', [SubsidiaryAccountController::class, 'store'])->name('subsidiary-accounts.store');
+        Route::get('/{subsidiaryAccount}', [SubsidiaryAccountController::class, 'show'])->name('subsidiary-accounts.show');
+        Route::put('/{subsidiaryAccount}', [SubsidiaryAccountController::class, 'update'])->name('subsidiary-accounts.update');
+        Route::delete('/{subsidiaryAccount}', [SubsidiaryAccountController::class, 'destroy'])->name('subsidiary-accounts.destroy');
     });
 });
 

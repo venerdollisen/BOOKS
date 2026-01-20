@@ -18,6 +18,13 @@ class DatabaseSeeder extends Seeder
         // Seed accounts first (foundational data)
         $this->call(AccountSeeder::class);
 
+        // Seed departments and projects
+        $this->call(DepartmentSeeder::class);
+        $this->call(ProjectSeeder::class);
+
+        // Seed subsidiary accounts
+        $this->call(SubsidiaryAccountSeeder::class);
+
         // Seed test user
         User::factory()->create([
             'name' => 'Test User',

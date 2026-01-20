@@ -1,5 +1,8 @@
 <template>
   <div class="min-h-screen bg-gray-50">
+    <!-- Toast Container -->
+    <ToastContainer />
+
     <!-- Show layout only for authenticated routes -->
     <template v-if="showLayout">
       <Sidebar :is-open="sidebarOpen" @close="sidebarOpen = false" />
@@ -32,6 +35,7 @@ import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Sidebar from './components/Layout/Sidebar.vue'
 import Navbar from './components/Layout/Navbar.vue'
+import ToastContainer from './components/Toast/ToastContainer.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()

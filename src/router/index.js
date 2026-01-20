@@ -119,6 +119,24 @@ const routes = [
     component: () => import('../views/Settings.vue'),
     meta: { title: 'Settings', requiresAuth: true },
   },
+  {
+    path: '/setup/departments',
+    name: 'departments',
+    component: () => import('../views/Departments.vue'),
+    meta: { title: 'Departments', requiresAuth: true },
+  },
+  {
+    path: '/setup/projects',
+    name: 'projects',
+    component: () => import('../views/Projects.vue'),
+    meta: { title: 'Projects', requiresAuth: true },
+  },
+  {
+    path: '/setup/subsidiary-accounts',
+    name: 'subsidiary-accounts',
+    component: () => import('../views/SubsidiaryAccounts.vue'),
+    meta: { title: 'Subsidiary Accounts', requiresAuth: true },
+  },
 ]
 
 const router = createRouter({

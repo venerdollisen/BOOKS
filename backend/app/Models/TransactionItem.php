@@ -10,6 +10,9 @@ class TransactionItem extends Model
     protected $fillable = [
         'transaction_id',
         'account_id',
+        'department_id',
+        'project_id',
+        'subsidiary_account_id',
         'type',
         'amount',
         'description',
@@ -33,5 +36,29 @@ class TransactionItem extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    /**
+     * Get the department for this item.
+     */
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * Get the project for this item.
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Get the subsidiary account for this item.
+     */
+    public function subsidiaryAccount(): BelongsTo
+    {
+        return $this->belongsTo(SubsidiaryAccount::class);
     }
 }

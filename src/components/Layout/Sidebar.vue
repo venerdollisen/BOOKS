@@ -173,6 +173,17 @@ const menuItems = [
   },
   { name: 'payroll', path: '/payroll', label: 'Payroll / Employees', icon: UserGroupIcon },
   { name: 'inventory', path: '/inventory', label: 'Inventory / Products', icon: CubeIcon },
+  {
+    name: 'setup',
+    path: '/setup',
+    label: 'Setup & Configuration',
+    icon: Cog6ToothIcon,
+    submenu: [
+      { name: 'departments', path: '/setup/departments', label: 'Departments' },
+      { name: 'projects', path: '/setup/projects', label: 'Projects' },
+      { name: 'subsidiary-accounts', path: '/setup/subsidiary-accounts', label: 'Subsidiary Accounts' },
+    ],
+  },
   { name: 'settings', path: '/settings', label: 'Settings / Administration', icon: Cog6ToothIcon },
 ]
 
