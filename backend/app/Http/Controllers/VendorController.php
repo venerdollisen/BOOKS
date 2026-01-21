@@ -51,12 +51,14 @@ class VendorController extends Controller
             'country' => 'nullable|string|max:100',
             'tax_id' => 'nullable|string|max:50',
             'payment_terms' => 'nullable|string|max:100',
+            'is_active' => 'nullable|boolean',
             'notes' => 'nullable|string',
         ]);
 
         $vendor = Vendor::create([
             'user_id' => auth()->id(),
-            ...$validated
+            ...$validated,
+            'is_active' => $validated['is_active'] ?? true,
         ]);
 
         return response()->json($vendor, 201);
@@ -64,13 +66,17 @@ class VendorController extends Controller
 
     public function show(Vendor $vendor): JsonResponse
     {
-        $this->authorize('view', $vendor);
+        if ($vendor->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
         return response()->json($vendor);
     }
 
     public function update(Request $request, Vendor $vendor): JsonResponse
     {
-        $this->authorize('update', $vendor);
+        if ($vendor->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -94,7 +100,9 @@ class VendorController extends Controller
 
     public function destroy(Vendor $vendor): JsonResponse
     {
-        $this->authorize('delete', $vendor);
+        if ($vendor->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
         $vendor->delete();
         return response()->json(['message' => 'Vendor deleted successfully']);
     }

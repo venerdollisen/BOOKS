@@ -9,6 +9,7 @@ use App\Http\Controllers\SubsidiaryAccountController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\Api\PeriodController;
 use App\Http\Controllers\Api\ReportController;
 use Illuminate\Http\Request;
@@ -113,5 +114,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Vendors routes (for Accounts Payable)
     Route::apiResource('vendors', VendorController::class);
     Route::get('vendors/active/list', [VendorController::class, 'getActiveVendors'])->name('vendors.active');
+
+    // Settings routes
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingsController::class, 'index'])->name('settings.index');
+        Route::put('/gl-accounts', [SettingsController::class, 'updateGLAccounts'])->name('settings.gl-accounts');
+        Route::get('/gl-accounts', [SettingsController::class, 'getGLAccounts'])->name('settings.gl-accounts.get');
+    });
 });
 

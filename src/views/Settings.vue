@@ -127,6 +127,11 @@
         </div>
       </div>
 
+      <!-- GL Accounts -->
+      <div v-if="activeTab === 'gl-accounts'" class="space-y-4">
+        <GLAccountSettings />
+      </div>
+
       <!-- Preferences -->
       <div v-if="activeTab === 'preferences'" class="space-y-4">
         <h3 class="text-lg font-semibold text-gray-900">System Preferences</h3>
@@ -158,12 +163,13 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { settingsApi } from '@/services/api'
+import GLAccountSettings from '@/components/Settings/GLAccountSettings.vue'
 import { PlusIcon } from '@heroicons/vue/24/outline'
 
 const activeTab = ref('company')
 const tabs = [
   { id: 'company', label: 'Company Profile' },
+  { id: 'gl-accounts', label: 'GL Accounts' },
   { id: 'tax', label: 'Tax Rates' },
   { id: 'users', label: 'Users & Roles' },
   { id: 'preferences', label: 'Preferences' },
@@ -215,8 +221,8 @@ const loadSettings = async () => {
 
 const saveCompanyProfile = async () => {
   try {
-    await settingsApi.updateCompanyProfile(companyForm.value)
-    alert('Company profile updated successfully')
+    // TODO: Implement company profile endpoint
+    alert('Company profile update not yet implemented')
   } catch (error) {
     console.error('Error saving company profile:', error)
   }
@@ -224,8 +230,8 @@ const saveCompanyProfile = async () => {
 
 const saveTaxRates = async () => {
   try {
-    await settingsApi.updateTaxRates(taxRates.value)
-    alert('Tax rates updated successfully')
+    // TODO: Implement tax rates endpoint
+    alert('Tax rates update not yet implemented')
   } catch (error) {
     console.error('Error saving tax rates:', error)
   }
@@ -233,8 +239,8 @@ const saveTaxRates = async () => {
 
 const savePreferences = async () => {
   try {
-    await settingsApi.updatePreferences(preferencesForm.value)
-    alert('Preferences updated successfully')
+    // TODO: Implement preferences endpoint
+    alert('Preferences update not yet implemented')
   } catch (error) {
     console.error('Error saving preferences:', error)
   }

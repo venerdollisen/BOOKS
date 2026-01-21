@@ -8,6 +8,16 @@
       </div>
 
       <form @submit.prevent="saveInvoice" class="p-6 space-y-4">
+        <!-- Warning: GL Account Not Configured -->
+        <div v-if="!glSettings.ar_account_id" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <p class="text-sm text-yellow-700">
+            ⚠️ <strong>Warning:</strong> Accounts Receivable account is not configured. 
+            <router-link to="/settings" class="underline font-semibold hover:text-yellow-900">
+              Configure GL Accounts
+            </router-link>
+          </p>
+        </div>
+
         <!-- Error Message -->
         <div v-if="errorMessage" class="bg-red-50 border border-red-200 rounded-lg p-4">
           <p class="text-sm text-red-700">{{ errorMessage }}</p>
@@ -29,19 +39,24 @@
           </div>
         </div>
 
-        <!-- Customer Details -->
+        <!-- Customer Selection -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="label">Customer Name *</label>
-            <input v-model="form.customer_name" type="text" class="input" required />
+            <label class="label">Customer *</label>
+            <select v-model="form.customer_id" class="input" required>
+              <option value="">Select a customer</option>
+              <option v-for="cust in customers" :key="cust.id" :value="cust.id">
+                {{ cust.name }}
+              </option>
+            </select>
           </div>
           <div>
             <label class="label">Email</label>
-            <input v-model="form.customer_email" type="email" class="input" />
+            <input v-model="form.customer_email" type="email" class="input" disabled />
           </div>
           <div>
             <label class="label">Phone</label>
-            <input v-model="form.customer_phone" type="tel" class="input" />
+            <input v-model="form.customer_phone" type="tel" class="input" disabled />
           </div>
         </div>
 
@@ -144,8 +159,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { receivablesApi } from '@/services/api'
+import { ref, computed, onMounted, watch } from 'vue'
+import { receivablesApi, customersApi } from '@/services/api'
 import { useAccountStore } from '@/stores/accounts'
 import { useToast } from '@/composables/useToast'
 import { PlusIcon } from '@heroicons/vue/24/outline'
@@ -160,11 +175,17 @@ const accountStore = useAccountStore()
 const { success, error: showError } = useToast()
 
 const accounts = ref([])
+const customers = ref([])
 const errorMessage = ref('')
 const loading = ref(false)
+const glSettings = ref({
+  ar_account_id: null,
+  ap_account_id: null,
+})
 
 const form = ref({
   invoice_number: '',
+  customer_id: '',
   customer_name: '',
   customer_email: '',
   customer_phone: '',
@@ -198,13 +219,18 @@ const removeItem = (index) => {
 const saveInvoice = async () => {
   errorMessage.value = ''
 
+  if (!glSettings.value.ar_account_id) {
+    errorMessage.value = 'Accounts Receivable account must be configured in GL Account Settings before creating invoices'
+    return
+  }
+
   if (form.value.items.length === 0) {
     errorMessage.value = 'At least one line item is required'
     return
   }
 
-  if (!form.value.invoice_number || !form.value.customer_name) {
-    errorMessage.value = 'Invoice number and customer name are required'
+  if (!form.value.invoice_number || !form.value.customer_id) {
+    errorMessage.value = 'Invoice number and customer are required'
     return
   }
 
@@ -213,6 +239,7 @@ const saveInvoice = async () => {
   try {
     const payload = {
       invoice_number: form.value.invoice_number,
+      customer_id: form.value.customer_id,
       customer_name: form.value.customer_name,
       customer_email: form.value.customer_email,
       customer_phone: form.value.customer_phone,
@@ -247,14 +274,69 @@ const saveInvoice = async () => {
 }
 
 onMounted(async () => {
-  if (accountStore.accounts.length === 0) {
-    await accountStore.fetchAccounts(1)
+  // Load accounts - fetch revenue accounts, with fallback to all accounts
+  try {
+    const token = localStorage.getItem('auth_token')
+    
+    // First try to get revenue accounts
+    const response = await fetch('/api/accounts?per_page=1000&account_type=revenue', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      accounts.value = data.data || []
+      
+      // If no revenue accounts, fetch all accounts as fallback
+      if (accounts.value.length === 0) {
+        const allResponse = await fetch('/api/accounts?per_page=1000', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+          }
+        })
+        if (allResponse.ok) {
+          const allData = await allResponse.json()
+          accounts.value = allData.data || []
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error loading accounts:', err)
   }
-  accounts.value = accountStore.accounts.filter(acc => acc.type === 'revenue')
+
+  // Load GL Account settings
+  try {
+    const token = localStorage.getItem('auth_token')
+    const response = await fetch('/api/settings/gl-accounts', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+      }
+    })
+    if (response.ok) {
+      const data = await response.json()
+      glSettings.value = data.data || {}
+    }
+  } catch (err) {
+    console.error('Error loading GL settings:', err)
+  }
+
+  // Load active customers
+  try {
+    const response = await customersApi.getActiveCustomers()
+    customers.value = response.data || []
+  } catch (err) {
+    console.error('Error loading customers:', err)
+  }
 
   if (props.invoice) {
     form.value = {
       invoice_number: props.invoice.invoice_number,
+      customer_id: props.invoice.customer_id || '',
       customer_name: props.invoice.customer_name,
       customer_email: props.invoice.customer_email,
       customer_phone: props.invoice.customer_phone,
@@ -268,6 +350,22 @@ onMounted(async () => {
         account_id: item.account_id,
       })) || [{ description: '', quantity: 1, unit_price: 0, account_id: '' }],
     }
+  }
+})
+
+// Watch for customer_id changes and update customer details
+watch(() => form.value.customer_id, (customerId) => {
+  if (customerId) {
+    const customer = customers.value.find(c => c.id === customerId)
+    if (customer) {
+      form.value.customer_name = customer.name
+      form.value.customer_email = customer.email || ''
+      form.value.customer_phone = customer.phone || ''
+    }
+  } else {
+    form.value.customer_name = ''
+    form.value.customer_email = ''
+    form.value.customer_phone = ''
   }
 })
 </script>

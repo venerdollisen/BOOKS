@@ -7,6 +7,7 @@ use App\Models\InvoiceItem;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Models\Account;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -97,7 +98,8 @@ class InvoiceController extends Controller
     {
         $validated = $request->validate([
             'invoice_number' => 'required|unique:invoices',
-            'customer_name' => 'required|string',
+            'customer_id' => 'nullable|exists:customers,id',
+            'customer_name' => 'nullable|string',
             'customer_email' => 'nullable|email',
             'customer_phone' => 'nullable|string',
             'invoice_date' => 'required|date',
@@ -113,6 +115,16 @@ class InvoiceController extends Controller
         try {
             DB::beginTransaction();
 
+            // If customer_id is provided, get customer details
+            if ($validated['customer_id']) {
+                $customer = \App\Models\Customer::find($validated['customer_id']);
+                if ($customer) {
+                    $validated['customer_name'] = $customer->name;
+                    $validated['customer_email'] = $validated['customer_email'] ?? $customer->email;
+                    $validated['customer_phone'] = $validated['customer_phone'] ?? $customer->phone;
+                }
+            }
+
             // Calculate total
             $total = 0;
             foreach ($validated['items'] as $item) {
@@ -122,8 +134,9 @@ class InvoiceController extends Controller
             // Create invoice
             $invoice = Invoice::create([
                 'user_id' => auth()->id(),
+                'customer_id' => $validated['customer_id'] ?? null,
                 'invoice_number' => $validated['invoice_number'],
-                'customer_name' => $validated['customer_name'],
+                'customer_name' => $validated['customer_name'] ?? null,
                 'customer_email' => $validated['customer_email'] ?? null,
                 'customer_phone' => $validated['customer_phone'] ?? null,
                 'invoice_date' => $validated['invoice_date'],
@@ -181,7 +194,8 @@ class InvoiceController extends Controller
         }
 
         $validated = $request->validate([
-            'customer_name' => 'required|string',
+            'customer_id' => 'nullable|exists:customers,id',
+            'customer_name' => 'nullable|string',
             'customer_email' => 'nullable|email',
             'customer_phone' => 'nullable|string',
             'invoice_date' => 'required|date',
@@ -197,6 +211,16 @@ class InvoiceController extends Controller
         try {
             DB::beginTransaction();
 
+            // If customer_id is provided, get customer details
+            if ($validated['customer_id']) {
+                $customer = \App\Models\Customer::find($validated['customer_id']);
+                if ($customer) {
+                    $validated['customer_name'] = $customer->name;
+                    $validated['customer_email'] = $validated['customer_email'] ?? $customer->email;
+                    $validated['customer_phone'] = $validated['customer_phone'] ?? $customer->phone;
+                }
+            }
+
             // Calculate new total
             $total = 0;
             foreach ($validated['items'] as $item) {
@@ -206,7 +230,8 @@ class InvoiceController extends Controller
             // Update invoice (only if in draft status)
             if ($invoice->status === 'draft') {
                 $invoice->update([
-                    'customer_name' => $validated['customer_name'],
+                    'customer_id' => $validated['customer_id'] ?? null,
+                    'customer_name' => $validated['customer_name'] ?? null,
                     'customer_email' => $validated['customer_email'] ?? null,
                     'customer_phone' => $validated['customer_phone'] ?? null,
                     'invoice_date' => $validated['invoice_date'],
@@ -302,11 +327,21 @@ class InvoiceController extends Controller
             }
 
             // Find AR account (accounts receivable)
-            $arAccount = Account::where('code', 'AR')->where('user_id', auth()->id())->first();
+            $arAccountId = Setting::get('ar_account_id');
+            $arAccount = null;
+
+            if ($arAccountId) {
+                $arAccount = Account::find($arAccountId);
+            }
+
+            // Fallback to searching by code or name
             if (!$arAccount) {
-                $arAccount = Account::where('type', 'asset')
+                $arAccount = Account::where('code', 'AR')->first();
+            }
+
+            if (!$arAccount) {
+                $arAccount = Account::where('account_type', 'asset')
                     ->where('name', 'like', '%Receivable%')
-                    ->where('user_id', auth()->id())
                     ->first();
             }
 
@@ -320,7 +355,7 @@ class InvoiceController extends Controller
                 'reference' => 'INV-' . $invoice->invoice_number,
                 'description' => 'Invoice: ' . $invoice->invoice_number,
                 'transaction_date' => $invoice->invoice_date,
-                'type' => 'journal_entry',
+                'type' => 'journal',
                 'status' => 'approved',
                 'amount' => $invoice->total_amount,
                 'notes' => 'Generated from invoice',
@@ -414,11 +449,10 @@ class InvoiceController extends Controller
             ]);
 
             // Find AR account
-            $arAccount = Account::where('code', 'AR')->where('user_id', auth()->id())->first();
+            $arAccount = Account::where('code', 'AR')->first();
             if (!$arAccount) {
-                $arAccount = Account::where('type', 'asset')
+                $arAccount = Account::where('account_type', 'asset')
                     ->where('name', 'like', '%Receivable%')
-                    ->where('user_id', auth()->id())
                     ->first();
             }
 
@@ -430,14 +464,11 @@ class InvoiceController extends Controller
                 default => 'CASH',
             };
 
-            $cashAccount = Account::where('code', $cashAccountCode)
-                ->where('user_id', auth()->id())
-                ->first();
+            $cashAccount = Account::where('code', $cashAccountCode)->first();
 
             if (!$cashAccount) {
-                $cashAccount = Account::where('type', 'asset')
+                $cashAccount = Account::where('account_type', 'asset')
                     ->where('name', 'like', '%Cash%')
-                    ->where('user_id', auth()->id())
                     ->first();
             }
 

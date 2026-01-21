@@ -52,12 +52,14 @@ class CustomerController extends Controller
             'tax_id' => 'nullable|string|max:50',
             'credit_limit' => 'nullable|numeric|min:0',
             'payment_terms' => 'nullable|string|max:100',
+            'is_active' => 'nullable|boolean',
             'notes' => 'nullable|string',
         ]);
 
         $customer = Customer::create([
             'user_id' => auth()->id(),
-            ...$validated
+            ...$validated,
+            'is_active' => $validated['is_active'] ?? true,
         ]);
 
         return response()->json($customer, 201);
@@ -65,13 +67,17 @@ class CustomerController extends Controller
 
     public function show(Customer $customer): JsonResponse
     {
-        $this->authorize('view', $customer);
+        if ($customer->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
         return response()->json($customer);
     }
 
     public function update(Request $request, Customer $customer): JsonResponse
     {
-        $this->authorize('update', $customer);
+        if ($customer->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -96,7 +102,9 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer): JsonResponse
     {
-        $this->authorize('delete', $customer);
+        if ($customer->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
         $customer->delete();
         return response()->json(['message' => 'Customer deleted successfully']);
     }

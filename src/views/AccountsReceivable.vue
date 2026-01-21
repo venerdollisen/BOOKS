@@ -284,7 +284,7 @@ const loadInvoices = async () => {
       page: currentPage.value,
     }
     const response = await receivablesApi.getInvoices(params)
-    invoices.value = response.data
+    invoices.value = response.data.data
     meta.value = response.meta
 
     const agingResponse = await receivablesApi.getAgingReport()

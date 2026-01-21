@@ -5,7 +5,7 @@
         <h2 class="text-2xl font-bold text-gray-900">Customers</h2>
         <p class="text-sm text-gray-500 mt-1">Manage your customer database</p>
       </div>
-      <button @click="showModal = true" class="btn btn-primary flex items-center gap-2">
+      <button @click="openNewCustomer" :disabled="loading" class="btn btn-primary flex items-center gap-2">
         <span>+</span> New Customer
       </button>
     </div>
@@ -15,7 +15,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label class="label">Search</label>
-          <input v-model="filters.search" type="text" class="input" placeholder="Name, email, or phone..." />
+          <input v-model="filters.search" type="text" class="input" placeholder="Name, email, or phone..." @keyup.enter="loadCustomers" />
         </div>
         <div>
           <label class="label">Status</label>
@@ -26,15 +26,19 @@
           </select>
         </div>
         <div class="flex items-end gap-2">
-          <button @click="loadCustomers" class="btn btn-secondary flex-1">Search</button>
-          <button @click="resetFilters" class="btn btn-secondary flex-1">Reset</button>
+          <button @click="loadCustomers" :disabled="loading" class="btn btn-secondary flex-1">Search</button>
+          <button @click="resetFilters" :disabled="loading" class="btn btn-secondary flex-1">Reset</button>
         </div>
       </div>
     </div>
 
     <!-- Customers Table -->
     <div class="card">
-      <div class="overflow-x-auto">
+      <div v-if="loading" class="flex justify-center py-8">
+        <div class="animate-spin">⏳</div>
+        <span class="ml-2">Loading customers...</span>
+      </div>
+      <div v-else class="overflow-x-auto">
         <table class="table">
           <thead>
             <tr>
@@ -64,7 +68,7 @@
                 <button @click="deleteCustomer(customer)" class="text-red-600 hover:text-red-800">Delete</button>
               </td>
             </tr>
-            <tr v-if="customers.length === 0">
+            <tr v-if="customers.length === 0 && !loading">
               <td colspan="7" class="text-center py-8 text-gray-500">No customers found</td>
             </tr>
           </tbody>
@@ -80,8 +84,9 @@
           <button
             v-for="page in getPageNumbers"
             :key="page"
-            @click="currentPage = page; loadCustomers()"
-            :class="['px-3 py-1 rounded', page === meta?.current_page ? 'bg-blue-600 text-white' : 'bg-gray-200']"
+            @click="currentPage = page"
+            :disabled="loading"
+            :class="['px-3 py-1 rounded', page === meta?.current_page ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300']"
           >
             {{ page }}
           </button>
@@ -121,6 +126,7 @@ const filters = ref({
 const currentPage = ref(1)
 const showModal = ref(false)
 const selectedCustomer = ref(null)
+const loading = ref(false)
 
 const { success, error: showError } = useToast()
 
@@ -145,18 +151,35 @@ const formatCurrency = (amount) => {
 }
 
 const loadCustomers = async () => {
+  loading.value = true
   try {
     const params = {
       page: currentPage.value,
       per_page: 15,
-      ...filters.value,
     }
+    
+    if (filters.value.search) {
+      params.search = filters.value.search
+    }
+    
+    if (filters.value.is_active !== '') {
+      params.is_active = filters.value.is_active === 'true' || filters.value.is_active === true
+    }
+
     const response = await customersApi.getCustomers(params)
-    customers.value = response.data
-    meta.value = response.meta
+
+    customers.value = response.data.data || []
+    meta.value = response.meta || {
+      total: 0,
+      per_page: 15,
+      current_page: 1,
+      last_page: 1,
+    }
   } catch (err) {
     console.error('Error loading customers:', err)
     showError('Error loading customers')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -164,6 +187,11 @@ const resetFilters = () => {
   filters.value = { search: '', is_active: '' }
   currentPage.value = 1
   loadCustomers()
+}
+
+const openNewCustomer = () => {
+  selectedCustomer.value = null
+  showModal.value = true
 }
 
 const editCustomer = (customer) => {
