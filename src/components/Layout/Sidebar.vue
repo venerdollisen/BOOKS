@@ -182,6 +182,8 @@ const menuItems = [
     label: 'Setup & Configuration',
     icon: Cog6ToothIcon,
     submenu: [
+      { name: 'customers', path: '/setup/customers', label: 'Customers' },
+      { name: 'vendors', path: '/setup/vendors', label: 'Vendors' },
       { name: 'departments', path: '/setup/departments', label: 'Departments' },
       { name: 'projects', path: '/setup/projects', label: 'Projects' },
       { name: 'subsidiary-accounts', path: '/setup/subsidiary-accounts', label: 'Subsidiary Accounts' },
