@@ -7,7 +7,7 @@
       </div>
       <button @click="showModal = true" class="btn btn-primary">
         <PlusIcon class="h-5 w-5 inline mr-2" />
-        New Entry
+        New Transaction
       </button>
     </div>
 

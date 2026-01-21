@@ -176,6 +176,7 @@
               </span>
             </th>
             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Description</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900">Files</th>
             <th class="px-6 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
           </tr>
         </thead>
@@ -213,6 +214,31 @@
             <td class="px-6 py-4 text-sm text-gray-600 truncate">
               {{ transaction.description || '-' }}
             </td>
+            <td class="px-6 py-4 text-sm">
+              <div class="flex flex-col gap-2">
+                <a
+                  v-if="transaction.attached_file"
+                  :href="`/storage/${transaction.attached_file}`"
+                  download
+                  class="text-blue-600 hover:text-blue-800 transition text-xs inline-flex items-center gap-1"
+                  title="Download attachment"
+                >
+                  📎 {{ getFileName(transaction.attached_file) }}
+                </a>
+                <a
+                  v-if="transaction.receipt_image"
+                  :href="`/storage/${transaction.receipt_image}`"
+                  target="_blank"
+                  class="text-green-600 hover:text-green-800 transition text-xs inline-flex items-center gap-1"
+                  title="View receipt image"
+                >
+                  📷 Receipt
+                </a>
+                <span v-if="!transaction.attached_file && !transaction.receipt_image" class="text-gray-400 text-xs">
+                  No files
+                </span>
+              </div>
+            </td>
             <td class="px-6 py-4 text-sm text-center space-x-2">
               <button
                 @click="editTransaction(transaction)"
@@ -227,6 +253,13 @@
                 title="View Details"
               >
                 👁
+              </button>
+              <button
+                @click="printTransaction(transaction)"
+                class="text-purple-600 hover:text-purple-800 transition"
+                title="Print"
+              >
+                🖨
               </button>
               <button
                 v-if="transaction.status === 'draft' || transaction.status === 'rejected'"
@@ -409,6 +442,185 @@ function getStatusBadgeClass(status) {
     rejected: 'bg-red-100 text-red-800',
   };
   return classes[status] || 'bg-gray-100 text-gray-800';
+}
+
+function getFileName(filePath) {
+  if (!filePath) return '';
+  return filePath.split('/').pop();
+}
+
+function printTransaction(transaction) {
+  const printWindow = window.open('', '', 'height=600,width=800');
+  const content = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Transaction - ${transaction.reference}</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 20px;
+          color: #333;
+        }
+        h1 {
+          color: #06275c;
+          border-bottom: 2px solid #06275c;
+          padding-bottom: 10px;
+        }
+        .transaction-header {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 30px;
+        }
+        .transaction-field {
+          margin-bottom: 10px;
+        }
+        .transaction-field label {
+          font-weight: bold;
+          color: #06275c;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th {
+          background-color: #06275c;
+          color: white;
+          padding: 10px;
+          text-align: left;
+          border: 1px solid #ddd;
+        }
+        td {
+          padding: 10px;
+          border: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        .text-right {
+          text-align: right;
+        }
+        .totals {
+          margin-top: 20px;
+          text-align: right;
+        }
+        .totals-row {
+          font-weight: bold;
+          font-size: 16px;
+          color: #06275c;
+        }
+        @media print {
+          body {
+            margin: 0;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Transaction Details</h1>
+      
+      <div class="transaction-header">
+        <div>
+          <div class="transaction-field">
+            <label>Reference:</label> ${transaction.reference}
+          </div>
+          <div class="transaction-field">
+            <label>Date:</label> ${new Date(transaction.transaction_date).toLocaleDateString('en-US')}
+          </div>
+          <div class="transaction-field">
+            <label>Type:</label> ${transaction.type}
+          </div>
+        </div>
+        <div>
+          <div class="transaction-field">
+            <label>Status:</label> ${transaction.status}
+          </div>
+          <div class="transaction-field">
+            <label>Amount:</label> $${parseFloat(transaction.amount).toFixed(2)}
+          </div>
+          ${transaction.payee_description ? `
+          <div class="transaction-field">
+            <label>Payee/Description:</label> ${transaction.payee_description}
+          </div>
+          ` : ''}
+        </div>
+      </div>
+
+      ${transaction.check_number ? `
+      <div class="transaction-header">
+        <div>
+          <div class="transaction-field">
+            <label>Check Number:</label> ${transaction.check_number}
+          </div>
+          ${transaction.check_date ? `
+          <div class="transaction-field">
+            <label>Check Date:</label> ${new Date(transaction.check_date).toLocaleDateString('en-US')}
+          </div>
+          ` : ''}
+        </div>
+        <div>
+          ${transaction.bank ? `
+          <div class="transaction-field">
+            <label>Bank:</label> ${transaction.bank}
+          </div>
+          ` : ''}
+          ${transaction.billing_number ? `
+          <div class="transaction-field">
+            <label>Billing Number:</label> ${transaction.billing_number}
+          </div>
+          ` : ''}
+        </div>
+      </div>
+      ` : ''}
+
+      <h2>Transaction Entries</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Subsidiary</th>
+            <th>Department</th>
+            <th>Project</th>
+            <th class="text-right">Debit</th>
+            <th class="text-right">Credit</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${transaction.items.map(item => `
+            <tr>
+              <td>${item.account?.name || 'N/A'}</td>
+              <td>${item.subsidiary_account?.name || '-'}</td>
+              <td>${item.department?.name || '-'}</td>
+              <td>${item.project?.name || '-'}</td>
+              <td class="text-right">${item.type === 'debit' ? '$' + parseFloat(item.amount).toFixed(2) : '-'}</td>
+              <td class="text-right">${item.type === 'credit' ? '$' + parseFloat(item.amount).toFixed(2) : '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="totals">
+        ${(() => {
+          const debits = transaction.items.filter(i => i.type === 'debit').reduce((sum, i) => sum + parseFloat(i.amount), 0);
+          const credits = transaction.items.filter(i => i.type === 'credit').reduce((sum, i) => sum + parseFloat(i.amount), 0);
+          return `
+            <div class="totals-row">Total Debit: $${debits.toFixed(2)}</div>
+            <div class="totals-row">Total Credit: $${credits.toFixed(2)}</div>
+          `;
+        })()}
+      </div>
+
+      <script>
+        window.print();
+        window.onafterprint = () => window.close();
+      <\/script>
+    </body>
+    </html>
+  `;
+  printWindow.document.write(content);
+  printWindow.document.close();
 }
 
 function editTransaction(transaction) {

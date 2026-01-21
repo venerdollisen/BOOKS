@@ -15,17 +15,20 @@ class Transaction extends Model
         'user_id',
         'reference',
         'description',
+        'payee_description',
         'transaction_date',
         'type',
         'status',
         'amount',
         'notes',
         'check_number',
+        'check_date',
         'bank',
         'billing_number',
         'collection_receipt',
         'delivery_receipt',
         'receipt_image',
+        'attached_file',
     ];
 
     protected $casts = [

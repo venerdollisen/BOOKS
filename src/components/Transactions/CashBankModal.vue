@@ -57,7 +57,23 @@
           </div>
           <div>
             <label class="label">Upload Receipt Image</label>
-            <input ref="fileInput" type="file" accept="image/*" class="input" @change="handleImageUpload" />
+            <div class="flex items-center gap-2">
+              <input 
+                ref="fileInput" 
+                type="file" 
+                accept="image/*" 
+                class="input flex-1" 
+                @change="handleImageUpload" 
+              />
+              <button
+                v-if="form.receiptImagePreview"
+                type="button"
+                @click="clearImageFile"
+                class="text-red-600 hover:text-red-700"
+              >
+                ✕
+              </button>
+            </div>
             <div v-if="form.receiptImagePreview" class="mt-2">
               <img :src="form.receiptImagePreview" alt="Receipt Preview" class="h-20 w-20 object-cover rounded" />
             </div>
@@ -200,6 +216,14 @@
             Cancel
           </button>
           <button
+            v-if="transaction && !loading"
+            type="button"
+            @click="printEntry"
+            class="px-4 py-2 border border-purple-300 text-purple-600 rounded-md hover:bg-purple-50 transition"
+          >
+            🖨 Print
+          </button>
+          <button
             type="submit"
             class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
             :disabled="loading"
@@ -293,7 +317,7 @@ watch(
   () => props.transaction,
   (newTransaction) => {
     if (newTransaction) {
-      form.date = newTransaction.transaction_date || form.date
+      form.date = newTransaction.transaction_date ? newTransaction.transaction_date.split('T')[0] : form.date
       form.type = newTransaction.type || ''
       form.description = newTransaction.description || ''
       form.reference = newTransaction.reference || ''
@@ -304,6 +328,9 @@ watch(
       form.deliveryReceipt = newTransaction.delivery_receipt || ''
       form.receiptImage = null
       form.receiptImagePreview = newTransaction.receipt_image ? `/storage/${newTransaction.receipt_image}` : null
+      if (fileInput.value) {
+        fileInput.value.value = ''
+      }
       form.entries = newTransaction.items?.map((item) => ({
         account_id: item.account_id,
         debit: item.type === 'debit' ? parseFloat(item.amount) : 0,
@@ -324,6 +351,9 @@ watch(
       form.deliveryReceipt = ''
       form.receiptImage = null
       form.receiptImagePreview = null
+      if (fileInput.value) {
+        fileInput.value.value = ''
+      }
       form.entries = [
         { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
         { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
@@ -343,6 +373,14 @@ const handleImageUpload = (e) => {
       form.receiptImagePreview = event.target.result
     }
     reader.readAsDataURL(file)
+  }
+}
+
+const clearImageFile = () => {
+  form.receiptImage = null
+  form.receiptImagePreview = null
+  if (fileInput.value) {
+    fileInput.value.value = ''
   }
 }
 
@@ -507,5 +545,201 @@ const saveTransaction = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const printEntry = () => {
+  if (!props.transaction) return
+  
+  const printWindow = window.open('', '', 'height=600,width=800')
+  const debits = form.entries.reduce((sum, entry) => sum + (parseFloat(entry.debit) || 0), 0)
+  const credits = form.entries.reduce((sum, entry) => sum + (parseFloat(entry.credit) || 0), 0)
+  
+  const paymentTypeMap = {
+    cash_receipt: 'Cash',
+    gcash: 'GCash',
+    bank_transfer: 'Bank Transfer',
+    check: 'Check',
+    credit_card: 'Credit Card',
+    debit_card: 'Debit Card'
+  }
+  
+  const content = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Cash Receipt - ${props.transaction.reference}</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 20px;
+          color: #333;
+        }
+        h1 {
+          color: #06275c;
+          border-bottom: 2px solid #06275c;
+          padding-bottom: 10px;
+        }
+        .entry-header {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 30px;
+        }
+        .entry-field {
+          margin-bottom: 10px;
+        }
+        .entry-field label {
+          font-weight: bold;
+          color: #06275c;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th {
+          background-color: #06275c;
+          color: white;
+          padding: 10px;
+          text-align: left;
+          border: 1px solid #ddd;
+        }
+        td {
+          padding: 10px;
+          border: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        .text-right {
+          text-align: right;
+        }
+        .balance-section {
+          margin-top: 20px;
+          padding: 15px;
+          background-color: #f0f9ff;
+          border: 2px solid #06275c;
+          border-radius: 5px;
+        }
+        .balance-row {
+          font-weight: bold;
+          font-size: 16px;
+          color: #06275c;
+          margin: 5px 0;
+        }
+        .balanced {
+          color: green;
+        }
+        @media print {
+          body {
+            margin: 0;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Cash Receipt / Payment</h1>
+      
+      <div class="entry-header">
+        <div>
+          <div class="entry-field">
+            <label>Reference:</label> ${props.transaction.reference}
+          </div>
+          <div class="entry-field">
+            <label>Date:</label> ${new Date(props.transaction.transaction_date).toLocaleDateString('en-US')}
+          </div>
+          <div class="entry-field">
+            <label>Status:</label> ${props.transaction.status}
+          </div>
+        </div>
+        <div>
+          ${form.description ? `
+          <div class="entry-field">
+            <label>Payment Description:</label> ${form.description}
+          </div>
+          ` : ''}
+          <div class="entry-field">
+            <label>Payment Type:</label> ${paymentTypeMap[form.type] || form.type}
+          </div>
+          ${form.checkNumber ? `
+          <div class="entry-field">
+            <label>Check Number:</label> ${form.checkNumber}
+          </div>
+          ` : ''}
+        </div>
+      </div>
+
+      ${form.bank || form.collectionReceipt || form.deliveryReceipt ? `
+      <div class="entry-header">
+        <div>
+          ${form.bank ? `
+          <div class="entry-field">
+            <label>Bank:</label> ${form.bank}
+          </div>
+          ` : ''}
+          ${form.billingNumber ? `
+          <div class="entry-field">
+            <label>Billing Number:</label> ${form.billingNumber}
+          </div>
+          ` : ''}
+        </div>
+        <div>
+          ${form.collectionReceipt ? `
+          <div class="entry-field">
+            <label>Collection Receipt:</label> ${form.collectionReceipt}
+          </div>
+          ` : ''}
+          ${form.deliveryReceipt ? `
+          <div class="entry-field">
+            <label>Delivery Receipt:</label> ${form.deliveryReceipt}
+          </div>
+          ` : ''}
+        </div>
+      </div>
+      ` : ''}
+
+      <h2>Transaction Entries</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Subsidiary</th>
+            <th>Department</th>
+            <th>Project</th>
+            <th class="text-right">Debit</th>
+            <th class="text-right">Credit</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${form.entries.map(entry => `
+            <tr>
+              <td>${accounts.value.find(a => a.id == entry.account_id)?.name || 'N/A'}</td>
+              <td>${subsidiaryAccounts.value.find(s => s.id == entry.subsidiary_account_id)?.name || '-'}</td>
+              <td>${departments.value.find(d => d.id == entry.department_id)?.name || '-'}</td>
+              <td>${projects.value.find(p => p.id == entry.project_id)?.name || '-'}</td>
+              <td class="text-right">${entry.debit > 0 ? '$' + parseFloat(entry.debit).toFixed(2) : '-'}</td>
+              <td class="text-right">${entry.credit > 0 ? '$' + parseFloat(entry.credit).toFixed(2) : '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="balance-section">
+        <div class="balance-row">Total Debit: $${debits.toFixed(2)}</div>
+        <div class="balance-row">Total Credit: $${credits.toFixed(2)}</div>
+        <div class="balance-row ${Math.abs(debits - credits) < 0.01 ? 'balanced' : ''}">
+          ${Math.abs(debits - credits) < 0.01 ? '✓ Balanced' : '✗ Not Balanced'}
+        </div>
+      </div>
+
+      <script>
+        window.print();
+        window.onafterprint = () => window.close();
+      <\/script>
+    </body>
+    </html>
+  `
+  printWindow.document.write(content)
+  printWindow.document.close()
 }
 </script>

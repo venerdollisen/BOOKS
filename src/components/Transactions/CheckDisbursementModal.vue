@@ -16,38 +16,65 @@
         <!-- Top Section -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="label">Check Number *</label>
-            <input v-model="form.checkNumber" type="text" required class="input" />
+            <label class="label">Reference Number</label>
+            <input v-model="form.reference" type="text" class="input" />
           </div>
           <div>
             <label class="label">Date *</label>
             <input v-model="form.date" type="date" required class="input" />
           </div>
           <div>
-            <label class="label">Bank *</label>
-            <input v-model="form.bank" type="text" required class="input" />
-          </div>
-          <div>
-            <label class="label">Reference Number</label>
-            <input v-model="form.reference" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Billing Number</label>
-            <input v-model="form.billingNumber" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Upload Check Image</label>
-            <input ref="fileInput" type="file" accept="image/*" class="input" @change="handleImageUpload" />
-            <div v-if="form.receiptImagePreview" class="mt-2">
-              <img :src="form.receiptImagePreview" alt="Check Preview" class="h-20 w-20 object-cover rounded" />
-            </div>
+            <label class="label">Check Number</label>
+            <input v-model="form.checkNumber" type="text" class="input" placeholder="e.g., CHK-001" />
           </div>
         </div>
 
-        <!-- Payment Description Textarea -->
+        <!-- Second Row: Check Date, Bank, Billing Number -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="label">Check Date</label>
+            <input v-model="form.checkDate" type="date" class="input" />
+          </div>
+          <div>
+            <label class="label">Bank</label>
+            <input v-model="form.bank" type="text" class="input" placeholder="Bank name" />
+          </div>
+          <div>
+            <label class="label">Billing Number</label>
+            <input v-model="form.billingNumber" type="text" class="input" placeholder="Invoice/Bill number" />
+          </div>
+        </div>
+
+        <!-- Payee/Description Textarea -->
         <div>
-          <label class="label">Payee/Description *</label>
-          <textarea v-model="form.description" required class="input min-h-24" placeholder="Enter payee name and payment details..."></textarea>
+          <label class="label">Payee / Description *</label>
+          <textarea v-model="form.payeeDescription" required class="input min-h-20" placeholder="Enter payee name and transaction details..."></textarea>
+        </div>
+
+        <!-- File Uploads -->
+        <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
+          <div>
+            <label class="label">Upload File</label>
+            <div class="flex items-center gap-2">
+              <input 
+                ref="fileInput" 
+                type="file" 
+                class="input flex-1" 
+                @change="handleFileUpload"
+              />
+              <button
+                v-if="form.attachedFile"
+                type="button"
+                @click="clearFile"
+                class="text-red-600 hover:text-red-700"
+              >
+                ✕
+              </button>
+            </div>
+            <div v-if="form.attachedFileName" class="mt-2">
+              <p class="text-sm text-gray-600">📎 {{ form.attachedFileName }}</p>
+            </div>
+          </div>
         </div>
 
         <!-- Double Entry Lines -->
@@ -170,6 +197,7 @@
         </div>
 
         <!-- Form Actions -->
+        <!-- Form Actions -->
         <div class="flex gap-3 justify-end border-t pt-6">
           <button
             type="button"
@@ -178,6 +206,14 @@
             :disabled="loading"
           >
             Cancel
+          </button>
+          <button
+            v-if="transaction && !loading"
+            type="button"
+            @click="printEntry"
+            class="px-4 py-2 border border-purple-300 text-purple-600 rounded-md hover:bg-purple-50 transition"
+          >
+            🖨 Print
           </button>
           <button
             type="submit"
@@ -231,13 +267,14 @@ const fileInput = ref(null)
 const form = reactive({
   date: new Date().toISOString().split('T')[0],
   type: 'check_disbursement',
-  description: '',
   reference: '',
   checkNumber: '',
+  checkDate: '',
   bank: '',
   billingNumber: '',
-  receiptImage: null,
-  receiptImagePreview: null,
+  payeeDescription: '',
+  attachedFile: null,
+  attachedFileName: '',
   entries: [
     { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
     { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
@@ -271,15 +308,16 @@ watch(
   () => props.transaction,
   (newTransaction) => {
     if (newTransaction) {
-      form.date = newTransaction.transaction_date || form.date
+      form.date = newTransaction.transaction_date ? newTransaction.transaction_date.split('T')[0] : form.date
       form.type = 'check_disbursement'
-      form.description = newTransaction.description || ''
       form.reference = newTransaction.reference || ''
       form.checkNumber = newTransaction.check_number || ''
+      form.checkDate = newTransaction.check_date ? newTransaction.check_date.split('T')[0] : ''
       form.bank = newTransaction.bank || ''
       form.billingNumber = newTransaction.billing_number || ''
-      form.receiptImage = null
-      form.receiptImagePreview = newTransaction.receipt_image ? `/storage/${newTransaction.receipt_image}` : null
+      form.payeeDescription = newTransaction.payee_description || ''
+      form.attachedFile = null
+      form.attachedFileName = ''
       form.entries = newTransaction.items?.map((item) => ({
         account_id: item.account_id,
         debit: item.type === 'debit' ? parseFloat(item.amount) : 0,
@@ -291,13 +329,14 @@ watch(
     } else {
       form.date = new Date().toISOString().split('T')[0]
       form.type = 'check_disbursement'
-      form.description = ''
       form.reference = ''
       form.checkNumber = ''
+      form.checkDate = ''
       form.bank = ''
       form.billingNumber = ''
-      form.receiptImage = null
-      form.receiptImagePreview = null
+      form.payeeDescription = ''
+      form.attachedFile = null
+      form.attachedFileName = ''
       form.entries = [
         { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
         { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
@@ -308,15 +347,19 @@ watch(
   { immediate: true }
 )
 
-const handleImageUpload = (e) => {
-  const file = e.target.files[0]
+const handleFileUpload = (event) => {
+  const file = event.target.files[0]
   if (file) {
-    form.receiptImage = file
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      form.receiptImagePreview = event.target.result
-    }
-    reader.readAsDataURL(file)
+    form.attachedFile = file
+    form.attachedFileName = file.name
+  }
+}
+
+const clearFile = () => {
+  form.attachedFile = null
+  form.attachedFileName = ''
+  if (fileInput.value) {
+    fileInput.value.value = ''
   }
 }
 
@@ -406,8 +449,8 @@ const saveTransaction = async () => {
     return
   }
 
-  if (!form.date || !form.checkNumber || !form.bank || !form.description) {
-    errorMessage.value = 'Check Number, Bank, Date, and Payee/Description are required.'
+  if (!form.date || !form.payeeDescription) {
+    errorMessage.value = 'Date and Payee/Description are required.'
     return
   }
 
@@ -417,18 +460,19 @@ const saveTransaction = async () => {
     // Create FormData to handle file uploads
     const formData = new FormData()
     formData.append('reference', form.reference || generateUniqueReference())
-    formData.append('description', form.description)
+    formData.append('payee_description', form.payeeDescription)
     formData.append('transaction_date', form.date)
     formData.append('type', 'check_disbursement')
     formData.append('amount', totalDebit.value)
     formData.append('status', 'draft')
     formData.append('check_number', form.checkNumber)
+    formData.append('check_date', form.checkDate)
     formData.append('bank', form.bank)
     formData.append('billing_number', form.billingNumber || '')
     
-    // Add file if selected
-    if (form.receiptImage) {
-      formData.append('receipt_image', form.receiptImage)
+    // Add file if present
+    if (form.attachedFile) {
+      formData.append('attached_file', form.attachedFile)
     }
 
     // Add items as JSON
@@ -479,5 +523,171 @@ const saveTransaction = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const generateUniqueReference = () => {
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase()
+  return `CHK-${random}-${timestamp}`
+}
+
+const printEntry = () => {
+  if (!props.transaction) return
+  
+  const printWindow = window.open('', '', 'height=600,width=800')
+  const debits = form.entries.reduce((sum, entry) => sum + (parseFloat(entry.debit) || 0), 0)
+  const credits = form.entries.reduce((sum, entry) => sum + (parseFloat(entry.credit) || 0), 0)
+  
+  const content = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Check Disbursement - ${props.transaction.reference}</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 20px;
+          color: #333;
+        }
+        h1 {
+          color: #06275c;
+          border-bottom: 2px solid #06275c;
+          padding-bottom: 10px;
+        }
+        .entry-header {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 30px;
+        }
+        .entry-field {
+          margin-bottom: 10px;
+        }
+        .entry-field label {
+          font-weight: bold;
+          color: #06275c;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th {
+          background-color: #06275c;
+          color: white;
+          padding: 10px;
+          text-align: left;
+          border: 1px solid #ddd;
+        }
+        td {
+          padding: 10px;
+          border: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        .text-right {
+          text-align: right;
+        }
+        .balance-section {
+          margin-top: 20px;
+          padding: 15px;
+          background-color: #f0f9ff;
+          border: 2px solid #06275c;
+          border-radius: 5px;
+        }
+        .balance-row {
+          font-weight: bold;
+          font-size: 16px;
+          color: #06275c;
+          margin: 5px 0;
+        }
+        .balanced {
+          color: green;
+        }
+        @media print {
+          body {
+            margin: 0;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Check Disbursement</h1>
+      
+      <div class="entry-header">
+        <div>
+          <div class="entry-field">
+            <label>Reference:</label> ${props.transaction.reference}
+          </div>
+          <div class="entry-field">
+            <label>Date:</label> ${new Date(props.transaction.transaction_date).toLocaleDateString('en-US')}
+          </div>
+          <div class="entry-field">
+            <label>Status:</label> ${props.transaction.status}
+          </div>
+        </div>
+        <div>
+          ${form.payeeDescription ? `
+          <div class="entry-field">
+            <label>Payee/Description:</label> ${form.payeeDescription}
+          </div>
+          ` : ''}
+          ${form.checkNumber ? `
+          <div class="entry-field">
+            <label>Check Number:</label> ${form.checkNumber}
+          </div>
+          ` : ''}
+          ${form.bank ? `
+          <div class="entry-field">
+            <label>Bank:</label> ${form.bank}
+          </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <h2>Transaction Entries</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Account</th>
+            <th>Subsidiary</th>
+            <th>Department</th>
+            <th>Project</th>
+            <th class="text-right">Debit</th>
+            <th class="text-right">Credit</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${form.entries.map(entry => `
+            <tr>
+              <td>${accounts.value.find(a => a.id == entry.account_id)?.name || 'N/A'}</td>
+              <td>${subsidiaryAccounts.value.find(s => s.id == entry.subsidiary_account_id)?.name || '-'}</td>
+              <td>${departments.value.find(d => d.id == entry.department_id)?.name || '-'}</td>
+              <td>${projects.value.find(p => p.id == entry.project_id)?.name || '-'}</td>
+              <td class="text-right">${entry.debit > 0 ? '$' + parseFloat(entry.debit).toFixed(2) : '-'}</td>
+              <td class="text-right">${entry.credit > 0 ? '$' + parseFloat(entry.credit).toFixed(2) : '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="balance-section">
+        <div class="balance-row">Total Debit: $${debits.toFixed(2)}</div>
+        <div class="balance-row">Total Credit: $${credits.toFixed(2)}</div>
+        <div class="balance-row ${Math.abs(debits - credits) < 0.01 ? 'balanced' : ''}">
+          ${Math.abs(debits - credits) < 0.01 ? '✓ Balanced' : '✗ Not Balanced'}
+        </div>
+      </div>
+
+      <script>
+        window.print();
+        window.onafterprint = () => window.close();
+      <\/script>
+    </body>
+    </html>
+  `
+  printWindow.document.write(content)
+  printWindow.document.close()
 }
 </script>

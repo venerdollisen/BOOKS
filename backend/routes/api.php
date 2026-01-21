@@ -6,6 +6,9 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SubsidiaryAccountController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\VendorController;
 use App\Http\Controllers\Api\PeriodController;
 use App\Http\Controllers\Api\ReportController;
 use Illuminate\Http\Request;
@@ -89,5 +92,26 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/gl-summary', [ReportController::class, 'glSummary'])->name('reports.gl-summary');
         Route::get('/gl/{account}', [ReportController::class, 'generalLedger'])->name('reports.gl');
     });
+
+    // Receivables routes
+    Route::prefix('receivables')->group(function () {
+        Route::get('/invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+        Route::post('/invoices', [InvoiceController::class, 'store'])->name('invoices.store');
+        Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+        Route::put('/invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
+        Route::delete('/invoices/{invoice}', [InvoiceController::class, 'destroy'])->name('invoices.destroy');
+        Route::post('/invoices/{invoice}/send', [InvoiceController::class, 'send'])->name('invoices.send');
+        Route::post('/invoices/{invoice}/finalize', [InvoiceController::class, 'finalize'])->name('invoices.finalize');
+        Route::post('/invoices/{invoice}/pay', [InvoiceController::class, 'recordPayment'])->name('invoices.pay');
+        Route::get('/aging', [InvoiceController::class, 'agingReport'])->name('receivables.aging');
+    });
+
+    // Customers routes
+    Route::apiResource('customers', CustomerController::class);
+    Route::get('customers/active/list', [CustomerController::class, 'getActiveCustomers'])->name('customers.active');
+
+    // Vendors routes (for Accounts Payable)
+    Route::apiResource('vendors', VendorController::class);
+    Route::get('vendors/active/list', [VendorController::class, 'getActiveVendors'])->name('vendors.active');
 });
 

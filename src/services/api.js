@@ -103,9 +103,10 @@ export const receivablesApi = {
   createInvoice: (data) => apiClient.post('/receivables/invoices', data),
   updateInvoice: (id, data) => apiClient.put(`/receivables/invoices/${id}`, data),
   deleteInvoice: (id) => apiClient.delete(`/receivables/invoices/${id}`),
-  markPaid: (id, data) => apiClient.post(`/receivables/invoices/${id}/pay`, data),
+  sendInvoice: (id) => apiClient.post(`/receivables/invoices/${id}/send`),
+  finalizeInvoice: (id) => apiClient.post(`/receivables/invoices/${id}/finalize`),
+  recordPayment: (id, data) => apiClient.post(`/receivables/invoices/${id}/pay`, data),
   getAgingReport: () => apiClient.get('/receivables/aging'),
-  getCustomerStatement: (customerId) => apiClient.get(`/receivables/customers/${customerId}/statement`),
 }
 
 // Accounts Payable API
@@ -167,6 +168,26 @@ export const settingsApi = {
   updateCurrencies: (data) => apiClient.put('/settings/currencies', data),
   getPreferences: () => apiClient.get('/settings/preferences'),
   updatePreferences: (data) => apiClient.put('/settings/preferences', data),
+}
+
+// Customers API
+export const customersApi = {
+  getCustomers: (params) => apiClient.get('/customers', { params }),
+  createCustomer: (data) => apiClient.post('/customers', data),
+  getCustomer: (id) => apiClient.get(`/customers/${id}`),
+  updateCustomer: (id, data) => apiClient.put(`/customers/${id}`, data),
+  deleteCustomer: (id) => apiClient.delete(`/customers/${id}`),
+  getActiveCustomers: () => apiClient.get('/customers/active/list'),
+}
+
+// Vendors API
+export const vendorsApi = {
+  getVendors: (params) => apiClient.get('/vendors', { params }),
+  createVendor: (data) => apiClient.post('/vendors', data),
+  getVendor: (id) => apiClient.get(`/vendors/${id}`),
+  updateVendor: (id, data) => apiClient.put(`/vendors/${id}`, data),
+  deleteVendor: (id) => apiClient.delete(`/vendors/${id}`),
+  getActiveVendors: () => apiClient.get('/vendors/active/list'),
 }
 
 export default apiClient

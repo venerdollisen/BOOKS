@@ -108,17 +108,20 @@ class TransactionController extends Controller
         $validated = $request->validate([
             'reference' => 'required|string|unique:transactions|max:100',
             'description' => 'nullable|string|max:1000',
+            'payee_description' => 'nullable|string|max:1000',
             'transaction_date' => 'required|date',
             'type' => 'required|in:receipt,payment,journal,transfer,cash_receipt,gcash,bank_transfer,check,check_disbursement,credit_card,debit_card',
             'status' => 'required|in:draft,pending,approved,rejected',
             'amount' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
             'check_number' => 'nullable|string|max:100',
+            'check_date' => 'nullable|date',
             'bank' => 'nullable|string|max:100',
             'billing_number' => 'nullable|string|max:100',
             'collection_receipt' => 'nullable|string|max:100',
             'delivery_receipt' => 'nullable|string|max:100',
             'receipt_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'attached_file' => 'nullable|file|max:10240',
             'items' => 'required|array|min:1',
             'items.*.account_id' => 'required|exists:accounts,id',
             'items.*.type' => 'required|in:debit,credit',
@@ -145,28 +148,38 @@ class TransactionController extends Controller
         }
 
         try {
-            // Handle file upload
+            // Handle file uploads
             $imagePath = null;
+            $attachedFilePath = null;
+            
             if ($request->hasFile('receipt_image')) {
                 $file = $request->file('receipt_image');
                 $imagePath = $file->store('receipts', 'public');
+            }
+            
+            if ($request->hasFile('attached_file')) {
+                $file = $request->file('attached_file');
+                $attachedFilePath = $file->store('attachments', 'public');
             }
 
             $transaction = Transaction::create([
                 'user_id' => auth()->id(),
                 'reference' => $validated['reference'],
                 'description' => $validated['description'] ?? null,
+                'payee_description' => $validated['payee_description'] ?? null,
                 'transaction_date' => $validated['transaction_date'],
                 'type' => $validated['type'],
                 'status' => $validated['status'],
                 'amount' => $validated['amount'],
                 'notes' => $validated['notes'] ?? null,
                 'check_number' => $validated['check_number'] ?? null,
+                'check_date' => $validated['check_date'] ?? null,
                 'bank' => $validated['bank'] ?? null,
                 'billing_number' => $validated['billing_number'] ?? null,
                 'collection_receipt' => $validated['collection_receipt'] ?? null,
                 'delivery_receipt' => $validated['delivery_receipt'] ?? null,
                 'receipt_image' => $imagePath,
+                'attached_file' => $attachedFilePath,
             ]);
 
             // Create line items
@@ -234,17 +247,20 @@ class TransactionController extends Controller
         $validated = $request->validate([
             'reference' => 'sometimes|string|unique:transactions,reference,' . $transaction->id . '|max:100',
             'description' => 'nullable|string|max:1000',
+            'payee_description' => 'nullable|string|max:1000',
             'transaction_date' => 'sometimes|date',
             'type' => 'sometimes|in:receipt,payment,journal,transfer,cash_receipt,gcash,bank_transfer,check,check_disbursement,credit_card,debit_card',
             'status' => 'sometimes|in:draft,pending,approved,rejected',
             'amount' => 'sometimes|numeric|min:0.01',
             'notes' => 'nullable|string',
             'check_number' => 'nullable|string|max:100',
+            'check_date' => 'nullable|date',
             'bank' => 'nullable|string|max:100',
             'billing_number' => 'nullable|string|max:100',
             'collection_receipt' => 'nullable|string|max:100',
             'delivery_receipt' => 'nullable|string|max:100',
             'receipt_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'attached_file' => 'nullable|file|max:10240',
             'items' => 'sometimes|array|min:1',
             'items.*.account_id' => 'required_with:items|exists:accounts,id',
             'items.*.type' => 'required_with:items|in:debit,credit',
@@ -296,6 +312,15 @@ class TransactionController extends Controller
             }
             $file = $request->file('receipt_image');
             $validated['receipt_image'] = $file->store('receipts', 'public');
+        }
+        
+        if ($request->hasFile('attached_file')) {
+            // Delete old file if exists
+            if ($transaction->attached_file && \Storage::disk('public')->exists($transaction->attached_file)) {
+                \Storage::disk('public')->delete($transaction->attached_file);
+            }
+            $file = $request->file('attached_file');
+            $validated['attached_file'] = $file->store('attachments', 'public');
         }
 
         $transaction->update($validated);
