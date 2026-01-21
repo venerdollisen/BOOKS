@@ -3,7 +3,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
       <div class="p-6 border-b border-gray-200">
         <h3 class="text-xl font-bold text-gray-900">
-          {{ transaction ? 'Edit Transaction' : 'New Cash Receipt Transaction' }}
+          {{ transaction ? 'Edit Journal Entry' : 'New Journal Entry' }}
         </h3>
         <p class="text-sm text-gray-500 mt-1">Double-entry bookkeeping: Debits must equal Credits</p>
       </div>
@@ -16,7 +16,7 @@
         <!-- Top Section -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="label">Official Receipt Number</label>
+            <label class="label">Reference Number</label>
             <input v-model="form.reference" type="text" class="input" />
           </div>
           <div>
@@ -24,59 +24,18 @@
             <input v-model="form.date" type="date" required class="input" />
           </div>
           <div>
-            <label class="label">Payment in Form *</label>
-            <select v-model="form.type" required class="input">
-              <option value="">Select Payment Type</option>
-              <option value="cash_receipt">Cash</option>
-              <option value="gcash">GCash</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="check">Check</option>
-              <option value="credit_card">Credit Card</option>
-              <option value="debit_card">Debit Card</option>
-            </select>
+            <label class="label">Description *</label>
+            <input v-model="form.description" type="text" required class="input" placeholder="Entry description" />
           </div>
-          <div>
-            <label class="label">Check Number</label>
-            <input v-model="form.checkNumber" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Bank</label>
-            <input v-model="form.bank" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Billing Number</label>
-            <input v-model="form.billingNumber" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Collection Receipt</label>
-            <input v-model="form.collectionReceipt" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Delivery Receipt</label>
-            <input v-model="form.deliveryReceipt" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Upload Receipt Image</label>
-            <input ref="fileInput" type="file" accept="image/*" class="input" @change="handleImageUpload" />
-            <div v-if="form.receiptImagePreview" class="mt-2">
-              <img :src="form.receiptImagePreview" alt="Receipt Preview" class="h-20 w-20 object-cover rounded" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Payment Description Textarea -->
-        <div>
-          <label class="label">Payment Description *</label>
-          <textarea v-model="form.description" required class="input min-h-24" placeholder="Enter payment details..."></textarea>
         </div>
 
         <!-- Double Entry Lines -->
         <div class="border-t border-gray-200 pt-4">
           <div class="flex justify-between items-center mb-4">
-            <h4 class="text-lg font-semibold text-gray-900">Transaction Entries</h4>
+            <h4 class="text-lg font-semibold text-gray-900">Entry Lines</h4>
             <button type="button" @click="addEntry" class="btn btn-secondary text-sm">
               <PlusIcon class="h-4 w-4 inline mr-1" />
-              Add Entry
+              Add Line
             </button>
           </div>
 
@@ -90,7 +49,6 @@
                   <th class="px-3 py-2 text-left font-semibold">Project</th>
                   <th class="px-3 py-2 text-center font-semibold">Debit</th>
                   <th class="px-3 py-2 text-center font-semibold">Credit</th>
-                  <th class="px-3 py-2 text-center font-semibold">Status</th>
                   <th class="px-3 py-2 text-center font-semibold">Action</th>
                 </tr>
               </thead>
@@ -155,10 +113,6 @@
                     />
                   </td>
                   <td class="px-3 py-2 text-center">
-                    <span v-if="isLineItemAllocationComplete(entry)" class="text-green-600 font-bold">✓</span>
-                    <span v-else-if="isLineItemAllocationPartial(entry)" class="text-red-600 font-bold">⚠</span>
-                  </td>
-                  <td class="px-3 py-2 text-center">
                     <button
                       v-if="form.entries.length > 2"
                       type="button"
@@ -206,7 +160,7 @@
           >
             <span v-if="loading" class="inline-block mr-2">⏳</span>
             {{ loading ? 'Saving...' : transaction ? 'Update' : 'Create' }}
-            Save Transaction
+            Entry
           </button>
         </div>
       </form>
@@ -217,10 +171,10 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useTransactionStore } from '@/stores/transactions'
+import { useAccountStore } from '@/stores/accounts'
 import { useDepartmentStore } from '@/stores/departments'
 import { useProjectStore } from '@/stores/projects'
 import { useSubsidiaryAccountStore } from '@/stores/subsidiaryAccounts'
-import { useAccountStore } from '@/stores/accounts'
 import { useToast } from '@/composables/useToast'
 import { PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
 
@@ -234,32 +188,23 @@ const props = defineProps({
 const emit = defineEmits(['saved', 'close'])
 
 const transactionStore = useTransactionStore()
+const accountStore = useAccountStore()
 const departmentStore = useDepartmentStore()
 const projectStore = useProjectStore()
 const subsidiaryAccountStore = useSubsidiaryAccountStore()
-const accountStore = useAccountStore()
 const { success, error: showError } = useToast()
 
 const loading = ref(false)
+const accounts = ref([])
 const departments = ref([])
 const projects = ref([])
 const subsidiaryAccounts = ref([])
-const accounts = ref([])
 const errorMessage = ref('')
-const fileInput = ref(null)
 
 const form = reactive({
   date: new Date().toISOString().split('T')[0],
-  type: '',
   description: '',
   reference: '',
-  checkNumber: '',
-  bank: '',
-  billingNumber: '',
-  collectionReceipt: '',
-  deliveryReceipt: '',
-  receiptImage: null,
-  receiptImagePreview: null,
   entries: [
     { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
     { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
@@ -294,36 +239,20 @@ watch(
   (newTransaction) => {
     if (newTransaction) {
       form.date = newTransaction.transaction_date || form.date
-      form.type = newTransaction.type || ''
       form.description = newTransaction.description || ''
       form.reference = newTransaction.reference || ''
-      form.checkNumber = newTransaction.check_number || ''
-      form.bank = newTransaction.bank || ''
-      form.billingNumber = newTransaction.billing_number || ''
-      form.collectionReceipt = newTransaction.collection_receipt || ''
-      form.deliveryReceipt = newTransaction.delivery_receipt || ''
-      form.receiptImage = null
-      form.receiptImagePreview = newTransaction.receipt_image ? `/storage/${newTransaction.receipt_image}` : null
       form.entries = newTransaction.items?.map((item) => ({
         account_id: item.account_id,
         debit: item.type === 'debit' ? parseFloat(item.amount) : 0,
         credit: item.type === 'credit' ? parseFloat(item.amount) : 0,
-        subsidiary_account_id: item.subsidiary_account_id || '',
-        department_id: item.department_id || '',
-        project_id: item.project_id || '',
+        subsidiary_account_id: item.subsidiary_account_id ? item.subsidiary_account_id.toString() : '',
+        department_id: item.department_id ? item.department_id.toString() : '',
+        project_id: item.project_id ? item.project_id.toString() : ''
       })) || form.entries
     } else {
       form.date = new Date().toISOString().split('T')[0]
-      form.type = ''
       form.description = ''
       form.reference = ''
-      form.checkNumber = ''
-      form.bank = ''
-      form.billingNumber = ''
-      form.collectionReceipt = ''
-      form.deliveryReceipt = ''
-      form.receiptImage = null
-      form.receiptImagePreview = null
       form.entries = [
         { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
         { account_id: '', debit: 0, credit: 0, subsidiary_account_id: '', department_id: '', project_id: '' },
@@ -333,18 +262,6 @@ watch(
   },
   { immediate: true }
 )
-
-const handleImageUpload = (e) => {
-  const file = e.target.files[0]
-  if (file) {
-    form.receiptImage = file
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      form.receiptImagePreview = event.target.result
-    }
-    reader.readAsDataURL(file)
-  }
-}
 
 async function fetchAllocations() {
   try {
@@ -393,28 +310,6 @@ const updateEntry = (index) => {
   }
 }
 
-const isLineItemAllocationPartial = (entry) => {
-  const { subsidiary_account_id, department_id, project_id } = entry
-  const hasValue = [subsidiary_account_id, department_id, project_id].filter((v) => v).length
-  return hasValue > 0 && hasValue < 3
-}
-
-const isLineItemAllocationComplete = (entry) => {
-  const { subsidiary_account_id, department_id, project_id } = entry
-  return subsidiary_account_id && department_id && project_id
-}
-
-const validateAllocations = () => {
-  for (let i = 0; i < form.entries.length; i++) {
-    const entry = form.entries[i]
-    if (isLineItemAllocationPartial(entry)) {
-      errorMessage.value = `Entry ${i + 1} has incomplete allocation: All three fields (Subsidiary, Department, Project) must be filled together or left empty.`
-      return false
-    }
-  }
-  return true
-}
-
 const saveTransaction = async () => {
   errorMessage.value = ''
 
@@ -424,40 +319,26 @@ const saveTransaction = async () => {
   }
 
   if (form.entries.length < 2) {
-    errorMessage.value = 'Transaction must have at least 2 entries.'
+    errorMessage.value = 'Entry must have at least 2 lines.'
     return
   }
 
-  if (!validateAllocations()) {
-    return
-  }
-
-  if (!form.date || !form.type || !form.description) {
-    errorMessage.value = 'Date, Payment Type, and Payment Description are required.'
+  if (!form.date || !form.description) {
+    errorMessage.value = 'Date and Description are required.'
     return
   }
 
   loading.value = true
 
   try {
-    // Create FormData to handle file uploads
+    // Create FormData to handle submission
     const formData = new FormData()
     formData.append('reference', form.reference || generateUniqueReference())
     formData.append('description', form.description)
     formData.append('transaction_date', form.date)
-    formData.append('type', form.type)
+    formData.append('type', 'journal')
     formData.append('amount', totalDebit.value)
     formData.append('status', 'draft')
-    formData.append('check_number', form.checkNumber || '')
-    formData.append('bank', form.bank || '')
-    formData.append('billing_number', form.billingNumber || '')
-    formData.append('collection_receipt', form.collectionReceipt || '')
-    formData.append('delivery_receipt', form.deliveryReceipt || '')
-    
-    // Add file if selected
-    if (form.receiptImage) {
-      formData.append('receipt_image', form.receiptImage)
-    }
 
     // Add items as JSON
     formData.append('items', JSON.stringify(form.entries.map((entry) => ({
@@ -466,23 +347,23 @@ const saveTransaction = async () => {
       amount: entry.debit > 0 ? parseFloat(entry.debit) : parseFloat(entry.credit),
       subsidiary_account_id: entry.subsidiary_account_id || null,
       department_id: entry.department_id || null,
-      project_id: entry.project_id || null,
+      project_id: entry.project_id || null
     }))))
 
     if (props.transaction) {
       await transactionStore.updateTransaction(props.transaction.id, formData)
-      success('Transaction updated successfully!')
+      success('Entry updated successfully!')
     } else {
       await transactionStore.createTransaction(formData)
-      success('Transaction created successfully!')
+      success('Entry created successfully!')
     }
 
     emit('saved')
     emit('close')
   } catch (error) {
-    console.error('Error saving transaction:', error)
+    console.error('Error saving entry:', error)
     
-    let errorMsg = 'Error saving transaction'
+    let errorMsg = 'Error saving entry'
     
     // Handle Laravel validation errors with field-specific messages
     if (error.response?.data?.errors) {
@@ -507,5 +388,11 @@ const saveTransaction = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const generateUniqueReference = () => {
+  const timestamp = Date.now()
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase()
+  return `JNL-${random}-${timestamp}`
 }
 </script>

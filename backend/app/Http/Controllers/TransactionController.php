@@ -7,6 +7,7 @@ use App\Models\TransactionItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class TransactionController extends Controller
 {
@@ -44,6 +45,13 @@ class TransactionController extends Controller
             $query->where('transaction_date', '<=', $request->end_date);
         }
 
+        // Filter by account (filter by accounts in transaction items)
+        if ($request->has('account_id') && $request->account_id) {
+            $query->whereHas('items', function ($subQuery) use ($request) {
+                $subQuery->where('account_id', $request->account_id);
+            });
+        }
+
         // Sorting
         $sortBy = $request->input('sort_by', 'transaction_date');
         $sortOrder = $request->input('sort_order', 'desc');
@@ -60,13 +68,20 @@ class TransactionController extends Controller
         
         $total = $query->count();
         
-        $transactions = $query
-            ->with(['user'])
+        $paginated = $query
+            ->with(['user', 'items.account'])
             ->paginate($perPage, ['*'], 'page', $page);
+
+        // Calculate debit/credit totals for each transaction
+        $transactions = $paginated->getCollection()->map(function ($transaction) {
+            $transaction->debit_total = $transaction->items->where('type', 'debit')->sum('amount');
+            $transaction->credit_total = $transaction->items->where('type', 'credit')->sum('amount');
+            return $transaction;
+        });
 
         return response()->json([
             'success' => true,
-            'data' => $transactions->items(),
+            'data' => $transactions,
             'pagination' => [
                 'total' => $total,
                 'per_page' => $perPage,
@@ -83,19 +98,35 @@ class TransactionController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Parse items if it comes as JSON string from FormData
+        $items = $request->input('items');
+        if (is_string($items)) {
+            $items = json_decode($items, true) ?: [];
+        }
+        $request->merge(['items' => $items]);
+
         $validated = $request->validate([
             'reference' => 'required|string|unique:transactions|max:100',
-            'description' => 'nullable|string|max:500',
+            'description' => 'nullable|string|max:1000',
             'transaction_date' => 'required|date',
-            'type' => 'required|in:receipt,payment,journal,transfer',
+            'type' => 'required|in:receipt,payment,journal,transfer,cash_receipt,gcash,bank_transfer,check,check_disbursement,credit_card,debit_card',
             'status' => 'required|in:draft,pending,approved,rejected',
             'amount' => 'required|numeric|min:0.01',
             'notes' => 'nullable|string',
+            'check_number' => 'nullable|string|max:100',
+            'bank' => 'nullable|string|max:100',
+            'billing_number' => 'nullable|string|max:100',
+            'collection_receipt' => 'nullable|string|max:100',
+            'delivery_receipt' => 'nullable|string|max:100',
+            'receipt_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'items' => 'required|array|min:1',
             'items.*.account_id' => 'required|exists:accounts,id',
             'items.*.type' => 'required|in:debit,credit',
             'items.*.amount' => 'required|numeric|min:0.01',
             'items.*.description' => 'nullable|string',
+            'items.*.department_id' => 'nullable|exists:departments,id',
+            'items.*.project_id' => 'nullable|exists:projects,id',
+            'items.*.subsidiary_account_id' => 'nullable|exists:subsidiary_accounts,id',
         ]);
 
         // Verify double-entry: total debits = total credits
@@ -114,6 +145,13 @@ class TransactionController extends Controller
         }
 
         try {
+            // Handle file upload
+            $imagePath = null;
+            if ($request->hasFile('receipt_image')) {
+                $file = $request->file('receipt_image');
+                $imagePath = $file->store('receipts', 'public');
+            }
+
             $transaction = Transaction::create([
                 'user_id' => auth()->id(),
                 'reference' => $validated['reference'],
@@ -123,6 +161,12 @@ class TransactionController extends Controller
                 'status' => $validated['status'],
                 'amount' => $validated['amount'],
                 'notes' => $validated['notes'] ?? null,
+                'check_number' => $validated['check_number'] ?? null,
+                'bank' => $validated['bank'] ?? null,
+                'billing_number' => $validated['billing_number'] ?? null,
+                'collection_receipt' => $validated['collection_receipt'] ?? null,
+                'delivery_receipt' => $validated['delivery_receipt'] ?? null,
+                'receipt_image' => $imagePath,
             ]);
 
             // Create line items
@@ -133,6 +177,9 @@ class TransactionController extends Controller
                     'type' => $item['type'],
                     'amount' => $item['amount'],
                     'description' => $item['description'] ?? null,
+                    'department_id' => $item['department_id'] ?? null,
+                    'project_id' => $item['project_id'] ?? null,
+                    'subsidiary_account_id' => $item['subsidiary_account_id'] ?? null,
                 ]);
             }
 
@@ -177,19 +224,35 @@ class TransactionController extends Controller
             ], 403);
         }
 
+        // Parse items if it comes as JSON string from FormData
+        $items = $request->input('items');
+        if (is_string($items)) {
+            $items = json_decode($items, true) ?: [];
+        }
+        $request->merge(['items' => $items]);
+
         $validated = $request->validate([
             'reference' => 'sometimes|string|unique:transactions,reference,' . $transaction->id . '|max:100',
-            'description' => 'nullable|string|max:500',
+            'description' => 'nullable|string|max:1000',
             'transaction_date' => 'sometimes|date',
-            'type' => 'sometimes|in:receipt,payment,journal,transfer',
+            'type' => 'sometimes|in:receipt,payment,journal,transfer,cash_receipt,gcash,bank_transfer,check,check_disbursement,credit_card,debit_card',
             'status' => 'sometimes|in:draft,pending,approved,rejected',
             'amount' => 'sometimes|numeric|min:0.01',
             'notes' => 'nullable|string',
+            'check_number' => 'nullable|string|max:100',
+            'bank' => 'nullable|string|max:100',
+            'billing_number' => 'nullable|string|max:100',
+            'collection_receipt' => 'nullable|string|max:100',
+            'delivery_receipt' => 'nullable|string|max:100',
+            'receipt_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'items' => 'sometimes|array|min:1',
             'items.*.account_id' => 'required_with:items|exists:accounts,id',
             'items.*.type' => 'required_with:items|in:debit,credit',
             'items.*.amount' => 'required_with:items|numeric|min:0.01',
             'items.*.description' => 'nullable|string',
+            'items.*.department_id' => 'nullable|exists:departments,id',
+            'items.*.project_id' => 'nullable|exists:projects,id',
+            'items.*.subsidiary_account_id' => 'nullable|exists:subsidiary_accounts,id',
         ]);
 
         // Verify double-entry if items are provided
@@ -217,9 +280,22 @@ class TransactionController extends Controller
                     'type' => $item['type'],
                     'amount' => $item['amount'],
                     'description' => $item['description'] ?? null,
+                    'department_id' => $item['department_id'] ?? null,
+                    'project_id' => $item['project_id'] ?? null,
+                    'subsidiary_account_id' => $item['subsidiary_account_id'] ?? null,
                 ]);
             }
             unset($validated['items']);
+        }
+
+        // Handle file upload for update
+        if ($request->hasFile('receipt_image')) {
+            // Delete old image if exists
+            if ($transaction->receipt_image && \Storage::disk('public')->exists($transaction->receipt_image)) {
+                \Storage::disk('public')->delete($transaction->receipt_image);
+            }
+            $file = $request->file('receipt_image');
+            $validated['receipt_image'] = $file->store('receipts', 'public');
         }
 
         $transaction->update($validated);

@@ -20,6 +20,12 @@ class Transaction extends Model
         'status',
         'amount',
         'notes',
+        'check_number',
+        'bank',
+        'billing_number',
+        'collection_receipt',
+        'delivery_receipt',
+        'receipt_image',
     ];
 
     protected $casts = [

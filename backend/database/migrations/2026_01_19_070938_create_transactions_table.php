@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('reference')->unique();
             $table->text('description')->nullable();
             $table->date('transaction_date');
-            $table->enum('type', ['receipt', 'payment', 'journal', 'transfer'])->index();
+            $table->enum('type', ['receipt', 'payment', 'journal', 'transfer', 'cash_receipt', 'gcash', 'bank_transfer', 'check', 'check_disbursement', 'credit_card', 'debit_card'])->index();
             $table->enum('status', ['draft', 'pending', 'approved', 'rejected'])->default('draft')->index();
             $table->decimal('amount', 12, 2);
             $table->longText('notes')->nullable();

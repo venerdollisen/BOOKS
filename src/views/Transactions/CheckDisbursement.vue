@@ -2,12 +2,12 @@
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h3 class="text-xl font-bold text-gray-900">Journal Entries</h3>
-        <p class="text-sm text-gray-500 mt-1">Record general ledger entries</p>
+        <h3 class="text-xl font-bold text-gray-900">Check Disbursement Transactions</h3>
+        <p class="text-sm text-gray-500 mt-1">Record check disbursements and payments</p>
       </div>
       <button @click="showModal = true" class="btn btn-primary">
         <PlusIcon class="h-5 w-5 inline mr-2" />
-        New Entry
+        New Transaction
       </button>
     </div>
 
@@ -45,8 +45,9 @@
           <thead>
             <tr>
               <th>Date</th>
-              <th>Reference</th>
+              <th>Check #</th>
               <th>Description</th>
+              <th>Reference</th>
               <th class="text-right">Total Debit</th>
               <th class="text-right">Total Credit</th>
               <th class="text-right">Actions</th>
@@ -56,8 +57,9 @@
             <template v-for="transaction in transactions" :key="transaction.id">
               <tr class="hover:bg-gray-50">
                 <td>{{ formatDate(transaction.transaction_date) }}</td>
-                <td class="font-mono text-sm">{{ transaction.reference || '-' }}</td>
+                <td class="font-mono">{{ transaction.check_number || '-' }}</td>
                 <td>{{ transaction.description }}</td>
+                <td class="font-mono text-sm">{{ transaction.reference || '-' }}</td>
                 <td class="text-right font-medium text-green-600">
                   {{ formatCurrency(transaction.debit_total || 0) }}
                 </td>
@@ -87,9 +89,9 @@
               </tr>
               <!-- Expanded Details -->
               <tr v-if="expandedTransactions.includes(transaction.id)" class="bg-gray-50">
-                <td colspan="6" class="p-4">
+                <td colspan="7" class="p-4">
                   <div class="space-y-2">
-                    <h5 class="font-semibold text-sm mb-2">Journal Entry Lines:</h5>
+                    <h5 class="font-semibold text-sm mb-2">Transaction Entries:</h5>
                     <table class="w-full text-sm">
                       <thead>
                         <tr class="border-b bg-gray-100">
@@ -119,8 +121,8 @@
               </tr>
             </template>
             <tr v-if="transactions.length === 0">
-              <td colspan="6" class="text-center py-8 text-gray-500">
-                No entries found
+              <td colspan="7" class="text-center py-8 text-gray-500">
+                No transactions found
               </td>
             </tr>
           </tbody>
@@ -128,8 +130,8 @@
       </div>
     </div>
 
-    <!-- Journal Entry Modal -->
-    <JournalEntriesModal
+    <!-- Transaction Modal -->
+    <CheckDisbursementModal
       v-if="showModal"
       :transaction="selectedTransaction"
       @close="showModal = false"
@@ -143,7 +145,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useTransactionStore } from '@/stores/transactions'
 import { useAccountStore } from '@/stores/accounts'
 import { PlusIcon } from '@heroicons/vue/24/outline'
-import JournalEntriesModal from '@/components/Transactions/JournalEntriesModal.vue'
+import CheckDisbursementModal from '@/components/Transactions/CheckDisbursementModal.vue'
 
 const transactionStore = useTransactionStore()
 const accountStore = useAccountStore()
@@ -156,7 +158,7 @@ const filters = ref({
   date_from: '',
   date_to: '',
   account_id: '',
-  type: 'journal',
+  type: 'check_disbursement',
 })
 
 const transactions = computed(() => transactionStore.transactions)
@@ -178,6 +180,11 @@ const formatCurrency = (amount) => {
   }).format(amount || 0)
 }
 
+const calculateTotal = (items, type) => {
+  if (!items) return 0
+  return items.reduce((sum, item) => sum + (item.type === type ? parseFloat(item.amount) : 0), 0)
+}
+
 const loadTransactions = async () => {
   // Clear all filters first
   transactionStore.filters.search = ''
@@ -187,7 +194,7 @@ const loadTransactions = async () => {
   transactionStore.filters.end_date = ''
   
   // Set the type filter and date filters
-  transactionStore.filters.type = 'journal'
+  transactionStore.filters.type = 'check_disbursement'
   transactionStore.filters.start_date = filters.value.date_from || ''
   transactionStore.filters.end_date = filters.value.date_to || ''
   transactionStore.filters.account_id = filters.value.account_id || ''
@@ -201,7 +208,7 @@ const editTransaction = (transaction) => {
 }
 
 const deleteTransaction = async (id) => {
-  if (!confirm('Are you sure you want to delete this entry?')) return
+  if (!confirm('Are you sure you want to delete this transaction?')) return
 
   const success = await transactionStore.deleteTransaction(id)
   if (success) {
@@ -233,7 +240,7 @@ const clearFilters = async () => {
     date_from: '',
     date_to: '',
     account_id: '',
-    type: 'journal',
+    type: 'check_disbursement',
   }
   await loadTransactions()
 }
@@ -247,4 +254,3 @@ onMounted(async () => {
   await loadTransactions()
 })
 </script>
-

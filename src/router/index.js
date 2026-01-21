@@ -30,7 +30,13 @@ const routes = [
     path: '/transactions/cash-bank',
     name: 'cash-bank-transactions',
     component: () => import('../views/Transactions/CashBank.vue'),
-    meta: { title: 'Cash / Bank Transactions', requiresAuth: true },
+    meta: { title: 'Cash Receipt Transactions', requiresAuth: true },
+  },
+  {
+    path: '/transactions/check-disbursement',
+    name: 'check-disbursement',
+    component: () => import('../views/Transactions/CheckDisbursement.vue'),
+    meta: { title: 'Check Disbursement Transactions', requiresAuth: true },
   },
   {
     path: '/transactions/journal',

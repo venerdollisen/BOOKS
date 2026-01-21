@@ -3,7 +3,7 @@
     <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
       <div class="p-6 border-b border-gray-200">
         <h3 class="text-xl font-bold text-gray-900">
-          {{ transaction ? 'Edit Transaction' : 'New Cash Receipt Transaction' }}
+          {{ transaction ? 'Edit Check Disbursement' : 'New Check Disbursement Transaction' }}
         </h3>
         <p class="text-sm text-gray-500 mt-1">Double-entry bookkeeping: Debits must equal Credits</p>
       </div>
@@ -16,58 +16,38 @@
         <!-- Top Section -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="label">Official Receipt Number</label>
-            <input v-model="form.reference" type="text" class="input" />
+            <label class="label">Check Number *</label>
+            <input v-model="form.checkNumber" type="text" required class="input" />
           </div>
           <div>
             <label class="label">Date *</label>
             <input v-model="form.date" type="date" required class="input" />
           </div>
           <div>
-            <label class="label">Payment in Form *</label>
-            <select v-model="form.type" required class="input">
-              <option value="">Select Payment Type</option>
-              <option value="cash_receipt">Cash</option>
-              <option value="gcash">GCash</option>
-              <option value="bank_transfer">Bank Transfer</option>
-              <option value="check">Check</option>
-              <option value="credit_card">Credit Card</option>
-              <option value="debit_card">Debit Card</option>
-            </select>
+            <label class="label">Bank *</label>
+            <input v-model="form.bank" type="text" required class="input" />
           </div>
           <div>
-            <label class="label">Check Number</label>
-            <input v-model="form.checkNumber" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Bank</label>
-            <input v-model="form.bank" type="text" class="input" />
+            <label class="label">Reference Number</label>
+            <input v-model="form.reference" type="text" class="input" />
           </div>
           <div>
             <label class="label">Billing Number</label>
             <input v-model="form.billingNumber" type="text" class="input" />
           </div>
           <div>
-            <label class="label">Collection Receipt</label>
-            <input v-model="form.collectionReceipt" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Delivery Receipt</label>
-            <input v-model="form.deliveryReceipt" type="text" class="input" />
-          </div>
-          <div>
-            <label class="label">Upload Receipt Image</label>
+            <label class="label">Upload Check Image</label>
             <input ref="fileInput" type="file" accept="image/*" class="input" @change="handleImageUpload" />
             <div v-if="form.receiptImagePreview" class="mt-2">
-              <img :src="form.receiptImagePreview" alt="Receipt Preview" class="h-20 w-20 object-cover rounded" />
+              <img :src="form.receiptImagePreview" alt="Check Preview" class="h-20 w-20 object-cover rounded" />
             </div>
           </div>
         </div>
 
         <!-- Payment Description Textarea -->
         <div>
-          <label class="label">Payment Description *</label>
-          <textarea v-model="form.description" required class="input min-h-24" placeholder="Enter payment details..."></textarea>
+          <label class="label">Payee/Description *</label>
+          <textarea v-model="form.description" required class="input min-h-24" placeholder="Enter payee name and payment details..."></textarea>
         </div>
 
         <!-- Double Entry Lines -->
@@ -250,14 +230,12 @@ const fileInput = ref(null)
 
 const form = reactive({
   date: new Date().toISOString().split('T')[0],
-  type: '',
+  type: 'check_disbursement',
   description: '',
   reference: '',
   checkNumber: '',
   bank: '',
   billingNumber: '',
-  collectionReceipt: '',
-  deliveryReceipt: '',
   receiptImage: null,
   receiptImagePreview: null,
   entries: [
@@ -294,14 +272,12 @@ watch(
   (newTransaction) => {
     if (newTransaction) {
       form.date = newTransaction.transaction_date || form.date
-      form.type = newTransaction.type || ''
+      form.type = 'check_disbursement'
       form.description = newTransaction.description || ''
       form.reference = newTransaction.reference || ''
       form.checkNumber = newTransaction.check_number || ''
       form.bank = newTransaction.bank || ''
       form.billingNumber = newTransaction.billing_number || ''
-      form.collectionReceipt = newTransaction.collection_receipt || ''
-      form.deliveryReceipt = newTransaction.delivery_receipt || ''
       form.receiptImage = null
       form.receiptImagePreview = newTransaction.receipt_image ? `/storage/${newTransaction.receipt_image}` : null
       form.entries = newTransaction.items?.map((item) => ({
@@ -314,14 +290,12 @@ watch(
       })) || form.entries
     } else {
       form.date = new Date().toISOString().split('T')[0]
-      form.type = ''
+      form.type = 'check_disbursement'
       form.description = ''
       form.reference = ''
       form.checkNumber = ''
       form.bank = ''
       form.billingNumber = ''
-      form.collectionReceipt = ''
-      form.deliveryReceipt = ''
       form.receiptImage = null
       form.receiptImagePreview = null
       form.entries = [
@@ -432,8 +406,8 @@ const saveTransaction = async () => {
     return
   }
 
-  if (!form.date || !form.type || !form.description) {
-    errorMessage.value = 'Date, Payment Type, and Payment Description are required.'
+  if (!form.date || !form.checkNumber || !form.bank || !form.description) {
+    errorMessage.value = 'Check Number, Bank, Date, and Payee/Description are required.'
     return
   }
 
@@ -445,14 +419,12 @@ const saveTransaction = async () => {
     formData.append('reference', form.reference || generateUniqueReference())
     formData.append('description', form.description)
     formData.append('transaction_date', form.date)
-    formData.append('type', form.type)
+    formData.append('type', 'check_disbursement')
     formData.append('amount', totalDebit.value)
     formData.append('status', 'draft')
-    formData.append('check_number', form.checkNumber || '')
-    formData.append('bank', form.bank || '')
+    formData.append('check_number', form.checkNumber)
+    formData.append('bank', form.bank)
     formData.append('billing_number', form.billingNumber || '')
-    formData.append('collection_receipt', form.collectionReceipt || '')
-    formData.append('delivery_receipt', form.deliveryReceipt || '')
     
     // Add file if selected
     if (form.receiptImage) {
@@ -471,10 +443,10 @@ const saveTransaction = async () => {
 
     if (props.transaction) {
       await transactionStore.updateTransaction(props.transaction.id, formData)
-      success('Transaction updated successfully!')
+      success('Check disbursement updated successfully!')
     } else {
       await transactionStore.createTransaction(formData)
-      success('Transaction created successfully!')
+      success('Check disbursement created successfully!')
     }
 
     emit('saved')

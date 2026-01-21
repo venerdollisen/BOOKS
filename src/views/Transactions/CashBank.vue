@@ -2,7 +2,7 @@
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h3 class="text-xl font-bold text-gray-900">Cash / Bank Transactions</h3>
+        <h3 class="text-xl font-bold text-gray-900">Cash Receipt Transactions</h3>
         <p class="text-sm text-gray-500 mt-1">Record receipts, payments, and transfers</p>
       </div>
       <button @click="showModal = true" class="btn btn-primary">
@@ -13,7 +13,7 @@
 
     <!-- Filters -->
     <div class="card">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
         <div>
           <label class="label">Date From</label>
           <input v-model="filters.date_from" type="date" class="input" />
@@ -26,17 +26,14 @@
           <label class="label">Account</label>
           <select v-model="filters.account_id" class="input">
             <option value="">All Accounts</option>
-            <!-- Accounts would be loaded from API -->
+            <option v-for="account in accounts" :key="account.id" :value="account.id">
+              {{ account.code }} - {{ account.name }}
+            </option>
           </select>
         </div>
-        <div>
-          <label class="label">Type</label>
-          <select v-model="filters.type" class="input">
-            <option value="">All Types</option>
-            <option value="receipt">Receipt</option>
-            <option value="payment">Payment</option>
-            <option value="transfer">Transfer</option>
-          </select>
+        <div class="flex gap-2">
+          <button @click="applyFilters" class="btn btn-primary flex-1">Filter</button>
+          <button @click="clearFilters" class="btn btn-secondary flex-1">Clear</button>
         </div>
       </div>
     </div>
@@ -48,7 +45,6 @@
           <thead>
             <tr>
               <th>Date</th>
-              <th>Type</th>
               <th>Description</th>
               <th>Reference</th>
               <th class="text-right">Total Debit</th>
@@ -59,17 +55,7 @@
           <tbody>
             <template v-for="transaction in transactions" :key="transaction.id">
               <tr class="hover:bg-gray-50">
-                <td>{{ formatDate(transaction.date) }}</td>
-                <td>
-                  <span
-                    :class="[
-                      'px-2 py-1 text-xs font-medium rounded-full',
-                      getTypeClass(transaction.type),
-                    ]"
-                  >
-                    {{ transaction.type }}
-                  </span>
-                </td>
+                <td>{{ formatDate(transaction.transaction_date) }}</td>
                 <td>{{ transaction.description }}</td>
                 <td class="font-mono text-sm">{{ transaction.reference || '-' }}</td>
                 <td class="text-right font-medium text-green-600">
@@ -101,29 +87,29 @@
               </tr>
               <!-- Expanded Details -->
               <tr v-if="expandedTransactions.includes(transaction.id)" class="bg-gray-50">
-                <td colspan="7" class="p-4">
+                <td colspan="6" class="p-4">
                   <div class="space-y-2">
                     <h5 class="font-semibold text-sm mb-2">Transaction Entries:</h5>
                     <table class="w-full text-sm">
                       <thead>
-                        <tr class="border-b">
-                          <th class="text-left py-2">Account</th>
-                          <th class="text-right py-2">Debit</th>
-                          <th class="text-right py-2">Credit</th>
+                        <tr class="border-b bg-gray-100">
+                          <th class="text-left py-2 px-3">Account</th>
+                          <th class="text-right py-2 px-3">Debit</th>
+                          <th class="text-right py-2 px-3">Credit</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr
-                          v-for="(entry, idx) in transaction.entries"
+                          v-for="(entry, idx) in transaction.items"
                           :key="idx"
                           class="border-b"
                         >
-                          <td class="py-2">{{ entry.account?.name || 'N/A' }}</td>
-                          <td class="text-right py-2 text-green-600">
-                            {{ entry.debit > 0 ? formatCurrency(entry.debit) : '-' }}
+                          <td class="py-2 px-3">{{ entry.account?.name || 'N/A' }}</td>
+                          <td class="text-right py-2 px-3 text-green-600 font-medium">
+                            {{ entry.type === 'debit' ? formatCurrency(entry.amount) : '-' }}
                           </td>
-                          <td class="text-right py-2 text-red-600">
-                            {{ entry.credit > 0 ? formatCurrency(entry.credit) : '-' }}
+                          <td class="text-right py-2 px-3 text-red-600 font-medium">
+                            {{ entry.type === 'credit' ? formatCurrency(entry.amount) : '-' }}
                           </td>
                         </tr>
                       </tbody>
@@ -133,7 +119,7 @@
               </tr>
             </template>
             <tr v-if="transactions.length === 0">
-              <td colspan="7" class="text-center py-8 text-gray-500">
+              <td colspan="6" class="text-center py-8 text-gray-500">
                 No transactions found
               </td>
             </tr>
@@ -153,29 +139,36 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import { transactionsApi } from '@/services/api'
-import CashBankModal from '@/components/Transactions/CashBankModal.vue'
+import { ref, computed, onMounted } from 'vue'
+import { useTransactionStore } from '@/stores/transactions'
+import { useAccountStore } from '@/stores/accounts'
 import { PlusIcon } from '@heroicons/vue/24/outline'
+import CashBankModal from '@/components/Transactions/CashBankModal.vue'
 
-const transactions = ref([])
+const transactionStore = useTransactionStore()
+const accountStore = useAccountStore()
+
+const showModal = ref(false)
+const selectedTransaction = ref(null)
+const expandedTransactions = ref([])
+const accounts = ref([])
 const filters = ref({
   date_from: '',
   date_to: '',
   account_id: '',
-  type: '',
+  type: 'cash_receipt',
 })
-const showModal = ref(false)
-const selectedTransaction = ref(null)
-const expandedTransactions = ref([])
 
-// Watch filters for changes
-watch(filters, () => {
-  loadTransactions()
-}, { deep: true })
+const transactions = computed(() => transactionStore.transactions)
+const loading = computed(() => transactionStore.loading)
 
 const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US')
+  if (!date) return '-'
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 const formatCurrency = (amount) => {
@@ -195,18 +188,20 @@ const getTypeClass = (type) => {
 }
 
 const loadTransactions = async () => {
-  try {
-    const params = {
-      ...filters.value,
-      // Filter by cash/bank transaction types (exclude journal entries)
-      type: filters.value.type || 'receipt,payment,transfer',
-    }
-    const response = await transactionsApi.getAll(params)
-    transactions.value = response.data || []
-  } catch (error) {
-    console.error('Error loading transactions:', error)
-    transactions.value = []
-  }
+  // Clear all filters first
+  transactionStore.filters.search = ''
+  transactionStore.filters.status = ''
+  transactionStore.filters.account_id = ''
+  transactionStore.filters.start_date = ''
+  transactionStore.filters.end_date = ''
+  
+  // Set the type filter and date filters
+  transactionStore.filters.type = 'cash_receipt'
+  transactionStore.filters.start_date = filters.value.date_from || ''
+  transactionStore.filters.end_date = filters.value.date_to || ''
+  transactionStore.filters.account_id = filters.value.account_id || ''
+  
+  await transactionStore.fetchTransactions(1)
 }
 
 const editTransaction = (transaction) => {
@@ -217,11 +212,9 @@ const editTransaction = (transaction) => {
 const deleteTransaction = async (id) => {
   if (!confirm('Are you sure you want to delete this transaction?')) return
 
-  try {
-    await transactionsApi.delete(id)
+  const success = await transactionStore.deleteTransaction(id)
+  if (success) {
     await loadTransactions()
-  } catch (error) {
-    console.error('Error deleting transaction:', error)
   }
 }
 
@@ -240,7 +233,26 @@ const toggleDetails = (transactionId) => {
   }
 }
 
-onMounted(() => {
-  loadTransactions()
+const applyFilters = async () => {
+  await loadTransactions()
+}
+
+const clearFilters = async () => {
+  filters.value = {
+    date_from: '',
+    date_to: '',
+    account_id: '',
+    type: 'cash_receipt',
+  }
+  await loadTransactions()
+}
+
+onMounted(async () => {
+  // Clear old transactions immediately
+  transactionStore.transactions = []
+  
+  await accountStore.fetchAccounts(1)
+  accounts.value = accountStore.accounts
+  await loadTransactions()
 })
 </script>

@@ -33,7 +33,7 @@
 
 <script setup>
 const tabs = [
-  { name: 'cash-bank', path: '/transactions/cash-bank', label: 'Cash / Bank' },
+  { name: 'cash-bank', path: '/transactions/cash-bank', label: 'Cash Receipt' },
   { name: 'journal', path: '/transactions/journal', label: 'Journal Entries' },
   { name: 'sales', path: '/transactions/sales', label: 'Sales / Revenue' },
   { name: 'purchases', path: '/transactions/purchases', label: 'Purchases / Expenses' },

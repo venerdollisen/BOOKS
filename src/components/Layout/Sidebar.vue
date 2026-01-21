@@ -140,7 +140,8 @@ const menuItems = [
     label: 'Transactions',
     icon: DocumentTextIcon,
     submenu: [
-      { name: 'cash-bank-transactions', path: '/transactions/cash-bank', label: 'Cash / Bank' },
+      { name: 'cash-bank-transactions', path: '/transactions/cash-bank', label: 'Cash Receipt' },
+      { name: 'check-disbursement', path: '/transactions/check-disbursement', label: 'Check Disbursement' },
       { name: 'journal-entries', path: '/transactions/journal', label: 'Journal Entries' },
       { name: 'sales-revenue', path: '/transactions/sales', label: 'Sales / Revenue' },
       { name: 'purchases-expenses', path: '/transactions/purchases', label: 'Purchases / Expenses' },
